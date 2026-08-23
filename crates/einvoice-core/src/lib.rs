@@ -8,35 +8,46 @@ pub enum MigVersion {
     V4_1,
 }
 
-/// A Taiwan business identifier (統一編號) as represented in e-Invoice messages.
+/// MIG `BAN` data element.
+///
+/// MIG 4.1 defines this as 8 to 10 ASCII digits. For B2C messages the buyer
+/// identifier is represented by ten zeroes. This type intentionally models the
+/// wire-level MIG constraint rather than assuming that every value is an
+/// 8-digit domestic business registration number.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct BusinessIdentifier(String);
+pub struct Ban(String);
 
-impl BusinessIdentifier {
-    pub fn parse(value: impl Into<String>) -> Result<Self, IdentifierError> {
+impl Ban {
+    pub const B2C_BUYER: &'static str = "0000000000";
+
+    pub fn parse(value: impl Into<String>) -> Result<Self, BanError> {
         let value = value.into();
-        if value.len() == 8 && value.bytes().all(|byte| byte.is_ascii_digit()) {
+        if (8..=10).contains(&value.len()) && value.bytes().all(|byte| byte.is_ascii_digit()) {
             Ok(Self(value))
         } else {
-            Err(IdentifierError)
+            Err(BanError)
         }
     }
 
     pub fn as_str(&self) -> &str {
         &self.0
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct IdentifierError;
-
-impl fmt::Display for IdentifierError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("business identifier must contain exactly 8 ASCII digits")
+    pub fn is_b2c_buyer(&self) -> bool {
+        self.0 == Self::B2C_BUYER
     }
 }
 
-impl Error for IdentifierError {}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BanError;
+
+impl fmt::Display for BanError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("MIG BAN must contain 8 to 10 ASCII digits")
+    }
+}
+
+impl Error for BanError {}
 
 /// MIG message code such as F0401.
 ///
@@ -96,14 +107,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn accepts_eight_digit_business_identifier() {
-        assert!(BusinessIdentifier::parse("12345678").is_ok());
+    fn accepts_mig_ban_lengths() {
+        assert!(Ban::parse("12345678").is_ok());
+        assert!(Ban::parse("123456789").is_ok());
+        assert!(Ban::parse("1234567890").is_ok());
     }
 
     #[test]
-    fn rejects_non_eight_digit_business_identifier() {
-        assert!(BusinessIdentifier::parse("1234A678").is_err());
-        assert!(BusinessIdentifier::parse("1234567").is_err());
+    fn recognizes_b2c_buyer_placeholder() {
+        assert!(Ban::parse(Ban::B2C_BUYER).unwrap().is_b2c_buyer());
+        assert!(!Ban::parse("12345678").unwrap().is_b2c_buyer());
+    }
+
+    #[test]
+    fn rejects_invalid_mig_ban() {
+        assert!(Ban::parse("1234A678").is_err());
+        assert!(Ban::parse("1234567").is_err());
+        assert!(Ban::parse("12345678901").is_err());
     }
 
     #[test]
