@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/einvoice-core",
     "crates/einvoice-mig",
+    "crates/einvoice-envelope",
     "crates/einvoice-transport",
     "apps/einvoice-cli",
 ]
