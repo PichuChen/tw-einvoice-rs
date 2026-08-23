@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod f0401;
+
 use tw_einvoice_core::{MessageCode, MigVersion};
 
 /// Metadata common to a MIG document before message-specific parsing is added.
@@ -24,6 +26,7 @@ pub struct ValidationReport {
 }
 
 impl ValidationReport {
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         self.issues.is_empty()
     }

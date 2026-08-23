@@ -1,0 +1,2 @@
+# XML/MIG schema element names are domain identifiers, not prose words.
+doc-valid-idents = ["InvoiceType"]
