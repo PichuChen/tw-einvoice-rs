@@ -2,12 +2,16 @@
 
 use std::{error::Error, fmt};
 
-use tw_einvoice_core::{Ban, MigVersion};
+use tw_einvoice_core::MigVersion;
 
 /// Party information carried by the Turnkey invoice envelope.
+///
+/// The envelope XSD defines `PartyId` as an unconstrained XML string. Although
+/// domestic configurations commonly use a BAN here, the envelope layer must not
+/// impose the narrower MIG `BAN` lexical type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PartyInfo {
-    pub identifier: Ban,
+    pub identifier: String,
     pub description: Option<String>,
 }
 
@@ -40,6 +44,11 @@ pub struct InvoicePackMetadata {
 pub struct MigPayload(Vec<u8>);
 
 impl MigPayload {
+    /// Creates a non-empty serialized MIG payload.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EnvelopeError::EmptyPayload`] when `bytes` is empty.
     pub fn new(bytes: impl Into<Vec<u8>>) -> Result<Self, EnvelopeError> {
         let bytes = bytes.into();
         if bytes.is_empty() {
@@ -49,6 +58,7 @@ impl MigPayload {
         }
     }
 
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
@@ -69,6 +79,12 @@ pub struct InvoiceEnvelope {
 impl InvoiceEnvelope {
     pub const MAX_PAYLOADS: usize = 1_000;
 
+    /// Constructs an invoice envelope with the XSD-defined payload cardinality.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the pack is empty or contains more than 1,000
+    /// messages.
     pub fn new(
         routing: EnvelopeRouting,
         metadata: InvoicePackMetadata,
@@ -88,10 +104,12 @@ impl InvoiceEnvelope {
         }
     }
 
+    #[must_use]
     pub fn payloads(&self) -> &[MigPayload] {
         &self.payloads
     }
 
+    #[must_use]
     pub fn count(&self) -> usize {
         self.payloads.len()
     }
@@ -125,7 +143,7 @@ mod tests {
     fn routing() -> EnvelopeRouting {
         EnvelopeRouting {
             from: PartyInfo {
-                identifier: Ban::parse("12345678").unwrap(),
+                identifier: "12345678".into(),
                 description: None,
             },
             from_vac: RoutingInfo {
@@ -133,7 +151,7 @@ mod tests {
                 description: None,
             },
             to: PartyInfo {
-                identifier: Ban::parse("87654321").unwrap(),
+                identifier: "87654321".into(),
                 description: None,
             },
             to_vac: RoutingInfo {
