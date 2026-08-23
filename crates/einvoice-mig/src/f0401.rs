@@ -188,7 +188,12 @@ impl Party {
 
     fn validate(&self, prefix: &str, report: &mut ValidationReport) {
         text_range(report, &format!("{prefix}.Name"), &self.name, 1, 60);
-        optional_max(report, &format!("{prefix}.Address"), self.address.as_deref(), 100);
+        optional_max(
+            report,
+            &format!("{prefix}.Address"),
+            self.address.as_deref(),
+            100,
+        );
         optional_max(
             report,
             &format!("{prefix}.PersonInCharge"),
@@ -277,7 +282,12 @@ impl Main {
         self.buyer.validate("Main.Buyer", report);
         optional_max(report, "Main.MainRemark", self.main_remark.as_deref(), 200);
         optional_max(report, "Main.Category", self.category.as_deref(), 2);
-        optional_max(report, "Main.RelateNumber", self.relate_number.as_deref(), 20);
+        optional_max(
+            report,
+            "Main.RelateNumber",
+            self.relate_number.as_deref(),
+            20,
+        );
         optional_max(report, "Main.CarrierType", self.carrier_type.as_deref(), 6);
         optional_max(report, "Main.CarrierId1", self.carrier_id1.as_deref(), 400);
         optional_max(report, "Main.CarrierId2", self.carrier_id2.as_deref(), 400);
@@ -316,7 +326,12 @@ pub struct ProductItem {
 impl ProductItem {
     fn validate(&self, index: usize, report: &mut ValidationReport) {
         let prefix = format!("Details.ProductItem[{index}]");
-        text_max(report, &format!("{prefix}.Description"), &self.description, 500);
+        text_max(
+            report,
+            &format!("{prefix}.Description"),
+            &self.description,
+            500,
+        );
         decimal_constraint(
             report,
             &format!("{prefix}.Quantity"),
@@ -348,7 +363,12 @@ impl ProductItem {
             &self.sequence_number,
             4,
         );
-        optional_max(report, &format!("{prefix}.Remark"), self.remark.as_deref(), 120);
+        optional_max(
+            report,
+            &format!("{prefix}.Remark"),
+            self.remark.as_deref(),
+            120,
+        );
         optional_max(
             report,
             &format!("{prefix}.RelateNumber"),
@@ -394,7 +414,8 @@ impl Amount {
             decimal_constraint(report, "Amount.ExchangeRate", value, 13, 5, true);
         }
         if let Some(currency) = &self.currency {
-            let valid = currency.len() == 3 && currency.bytes().all(|byte| byte.is_ascii_uppercase());
+            let valid =
+                currency.len() == 3 && currency.bytes().all(|byte| byte.is_ascii_uppercase());
             if !valid {
                 issue(
                     report,
@@ -487,7 +508,9 @@ impl Invoice {
         optional_element(
             &mut out,
             "ZeroTaxRateReason",
-            self.main.zero_tax_rate_reason.map(ZeroTaxRateReason::as_str),
+            self.main
+                .zero_tax_rate_reason
+                .map(ZeroTaxRateReason::as_str),
         );
         optional_element(&mut out, "Reserved1", self.main.reserved1.as_deref());
         optional_element(&mut out, "Reserved2", self.main.reserved2.as_deref());
@@ -523,7 +546,11 @@ impl Invoice {
         element(&mut out, "TaxRate", self.amount.tax_rate.as_str());
         element(&mut out, "TaxAmount", self.amount.tax_amount.as_str());
         element(&mut out, "TotalAmount", self.amount.total_amount.as_str());
-        optional_decimal(&mut out, "DiscountAmount", self.amount.discount_amount.as_ref());
+        optional_decimal(
+            &mut out,
+            "DiscountAmount",
+            self.amount.discount_amount.as_ref(),
+        );
         optional_decimal(
             &mut out,
             "OriginalCurrencyAmount",
@@ -731,10 +758,7 @@ fn is_xsd_time(value: &str) -> bool {
     let mut rest = &value[8..];
     let mut fractional_nonzero = false;
     if let Some(fractional) = rest.strip_prefix('.') {
-        let fraction_len = fractional
-            .bytes()
-            .take_while(u8::is_ascii_digit)
-            .count();
+        let fraction_len = fractional.bytes().take_while(u8::is_ascii_digit).count();
         if fraction_len == 0 {
             return false;
         }
@@ -846,10 +870,12 @@ mod tests {
         let mut invoice = sample();
         invoice.amount.tax_amount = decimal("1.5");
         let report = invoice.validate();
-        assert!(report
-            .issues
-            .iter()
-            .any(|issue| issue.path.as_deref() == Some("Amount.TaxAmount")));
+        assert!(
+            report
+                .issues
+                .iter()
+                .any(|issue| issue.path.as_deref() == Some("Amount.TaxAmount"))
+        );
     }
 
     #[test]
@@ -860,10 +886,12 @@ mod tests {
 
         invoice.amount.exchange_rate = Some(decimal("0.000001"));
         let report = invoice.validate();
-        assert!(report
-            .issues
-            .iter()
-            .any(|issue| issue.path.as_deref() == Some("Amount.ExchangeRate")));
+        assert!(
+            report
+                .issues
+                .iter()
+                .any(|issue| issue.path.as_deref() == Some("Amount.ExchangeRate"))
+        );
     }
 
     #[test]
