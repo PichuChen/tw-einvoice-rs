@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/einvoice-core",
+    "crates/einvoice-mig",
+    "crates/einvoice-transport",
+    "apps/einvoice-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+repository = "https://github.com/PichuChen/tw-einvoice-rs"
+rust-version = "1.85"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"
