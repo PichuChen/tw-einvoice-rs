@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod f0401;
+
 use tw_einvoice_core::{MessageCode, MigVersion};
 
 /// Metadata common to a MIG document before message-specific parsing is added.
