@@ -20,6 +20,19 @@ pub struct SubmissionReceipt {
 pub trait InvoiceTransport {
     type Error;
 
+    /// Submit a package to the concrete transport.
+    ///
+    /// # Errors
+    ///
+    /// Returns the adapter-specific error when the package cannot be submitted
+    /// or when submission outcome cannot be determined safely.
     fn submit(&self, package: &SubmissionPackage) -> Result<SubmissionReceipt, Self::Error>;
+
+    /// Reconcile a previously submitted remote object or operation.
+    ///
+    /// # Errors
+    ///
+    /// Returns the adapter-specific error when remote state cannot be queried
+    /// or interpreted reliably.
     fn reconcile(&self, remote_id: &str) -> Result<SubmissionReceipt, Self::Error>;
 }
