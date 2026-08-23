@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod gateway;
+
 use tw_einvoice_core::SubmissionState;
 
 /// An opaque package ready to be handed to a concrete transport.
