@@ -487,14 +487,14 @@ impl From<WireInvoiceReference> for InvoiceReference {
 mod tests {
     use super::*;
 
-    const ROUTING: &str = r#"
+    const ROUTING: &str = r"
         <RoutingInfo>
           <From><PartyId>12345678</PartyId><Description>sender</Description></From>
           <FromVAC><RoutingId>FROM-VAC</RoutingId></FromVAC>
           <To><PartyId>0000000000</PartyId></To>
           <ToVAC><RoutingId>TO-VAC</RoutingId><Description>platform</Description></ToVAC>
         </RoutingInfo>
-    "#;
+    ";
 
     #[test]
     fn parses_process_result_and_preserves_string_size() {
