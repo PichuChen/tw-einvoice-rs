@@ -64,7 +64,8 @@ impl ProcessResult {
     /// Returns [`ResultParseError`] when the XML is malformed or does not match
     /// the expected result-message structure.
     pub fn parse(xml: &str) -> Result<Self, ResultParseError> {
-        let wire: WireProcessResult = quick_xml::de::from_str(xml).map_err(ResultParseError::Xml)?;
+        let wire: WireProcessResult =
+            quick_xml::de::from_str(xml).map_err(ResultParseError::Xml)?;
         Ok(wire.into())
     }
 }
@@ -148,13 +149,13 @@ impl SummaryMessage {
             });
         }
 
-        if let Some(expected) = expected_quantity
-            && i64::from(self.result.total.count) != i64::from(expected)
-        {
-            issues.push(SummaryValidationIssue::ExpectedQuantityMismatch {
-                expected,
-                actual: self.result.total.count,
-            });
+        if let Some(expected) = expected_quantity {
+            if i64::from(self.result.total.count) != i64::from(expected) {
+                issues.push(SummaryValidationIssue::ExpectedQuantityMismatch {
+                    expected,
+                    actual: self.result.total.count,
+                });
+            }
         }
 
         issues
@@ -183,7 +184,8 @@ impl SummaryResult {
     /// Returns [`ResultParseError`] when the XML is malformed or does not match
     /// the expected result-message structure.
     pub fn parse(xml: &str) -> Result<Self, ResultParseError> {
-        let wire: WireSummaryResult = quick_xml::de::from_str(xml).map_err(ResultParseError::Xml)?;
+        let wire: WireSummaryResult =
+            quick_xml::de::from_str(xml).map_err(ResultParseError::Xml)?;
         Ok(wire.into())
     }
 }
@@ -465,11 +467,9 @@ impl From<WireResultDetail> for ResultDetail {
     fn from(value: WireResultDetail) -> Self {
         Self {
             count: value.count,
-            invoices: value
-                .invoices
-                .map_or_else(Vec::new, |invoices| {
-                    invoices.invoices.into_iter().map(Into::into).collect()
-                }),
+            invoices: value.invoices.map_or_else(Vec::new, |invoices| {
+                invoices.invoices.into_iter().map(Into::into).collect()
+            }),
         }
     }
 }
@@ -576,8 +576,14 @@ mod tests {
         let message = &result.messages[0];
         assert_eq!(message.info.size, "12345");
         assert!(message.is_consistent(Some(2)));
-        assert_eq!(message.result.good.invoices[0].reference_number, "AB12345678");
-        assert_eq!(message.result.failed.invoices[0].reference_number, "AB12345679");
+        assert_eq!(
+            message.result.good.invoices[0].reference_number,
+            "AB12345678"
+        );
+        assert_eq!(
+            message.result.failed.invoices[0].reference_number,
+            "AB12345679"
+        );
     }
 
     #[test]
