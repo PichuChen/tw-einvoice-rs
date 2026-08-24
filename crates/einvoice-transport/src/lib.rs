@@ -2,6 +2,7 @@
 
 pub mod filename;
 pub mod gateway;
+pub mod receiver;
 
 use tw_einvoice_core::SubmissionState;
 
