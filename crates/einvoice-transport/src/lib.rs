@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod filename;
 pub mod gateway;
 
 use tw_einvoice_core::SubmissionState;
