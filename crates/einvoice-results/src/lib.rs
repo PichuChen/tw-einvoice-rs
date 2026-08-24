@@ -252,8 +252,10 @@ struct WireProcessResult {
 #[serde(rename_all = "PascalCase")]
 struct WireRouting {
     from: WireParty,
+    #[serde(rename = "FromVAC")]
     from_vac: WireRoute,
     to: WireParty,
+    #[serde(rename = "ToVAC")]
     to_vac: WireRoute,
 }
 
