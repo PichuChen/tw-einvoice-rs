@@ -1,0 +1,15 @@
+[package]
+name = "tw-einvoice-sftp"
+description = "Secure async SFTP transport for Taiwan e-Invoice platform interoperability"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+russh = { version = "0.63", default-features = false, features = ["ring", "rsa", "flate2"] }
+russh-sftp = "2.4"
+
+[lints]
+workspace = true
