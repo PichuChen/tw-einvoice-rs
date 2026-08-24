@@ -1,0 +1,15 @@
+[package]
+name = "tw-einvoice-results"
+description = "MIG 4.1 ProcessResult and SummaryResult parsing for Taiwan e-Invoice reconciliation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+quick-xml = { version = "0.41", features = ["serialize"] }
+serde = { version = "1", features = ["derive"] }
+
+[lints]
+workspace = true
