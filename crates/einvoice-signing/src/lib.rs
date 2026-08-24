@@ -95,18 +95,20 @@ impl CmsSignedData {
     /// the Linux distribution under investigation.
     #[must_use]
     pub fn to_turnkey_armored(&self) -> String {
+        const LINE_MASK: usize = 63; // 64-character lines; bit mask preserves Rust 1.85 MSRV.
+
         let encoded = STANDARD.encode(&self.0);
         let line_count = encoded.len().div_ceil(64);
         let mut output = String::with_capacity(encoded.len() + line_count);
 
         for (index, character) in encoded.chars().enumerate() {
             output.push(character);
-            if (index + 1).is_multiple_of(64) {
+            if ((index + 1) & LINE_MASK) == 0 {
                 output.push('\n');
             }
         }
 
-        if !encoded.len().is_multiple_of(64) {
+        if (encoded.len() & LINE_MASK) != 0 {
             output.push('\n');
         }
 
