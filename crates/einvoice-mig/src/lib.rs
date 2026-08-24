@@ -24,6 +24,7 @@ pub struct ValidationReport {
 }
 
 impl ValidationReport {
+    #[must_use]
     pub fn is_valid(&self) -> bool {
         self.issues.is_empty()
     }

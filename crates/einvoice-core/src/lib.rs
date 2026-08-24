@@ -20,6 +20,12 @@ pub struct Ban(String);
 impl Ban {
     pub const B2C_BUYER: &'static str = "0000000000";
 
+    /// Parses the MIG `BAN` lexical representation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BanError`] unless `value` contains between 8 and 10 ASCII
+    /// decimal digits.
     pub fn parse(value: impl Into<String>) -> Result<Self, BanError> {
         let value = value.into();
         if (8..=10).contains(&value.len()) && value.bytes().all(|byte| byte.is_ascii_digit()) {
@@ -29,10 +35,12 @@ impl Ban {
         }
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
+    #[must_use]
     pub fn is_b2c_buyer(&self) -> bool {
         self.0 == Self::B2C_BUYER
     }
@@ -57,6 +65,12 @@ impl Error for BanError {}
 pub struct MessageCode(String);
 
 impl MessageCode {
+    /// Parses the lexical message-code shape `[A-Z][0-9]{4}`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MessageCodeError`] when `value` does not match the five-byte
+    /// uppercase-letter-plus-four-digits representation.
     pub fn parse(value: impl Into<String>) -> Result<Self, MessageCodeError> {
         let value = value.into();
         let bytes = value.as_bytes();
@@ -71,6 +85,7 @@ impl MessageCode {
         }
     }
 
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }

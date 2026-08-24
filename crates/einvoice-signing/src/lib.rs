@@ -95,13 +95,20 @@ impl CmsSignedData {
     /// the Linux distribution under investigation.
     #[must_use]
     pub fn to_turnkey_armored(&self) -> String {
+        const LINE_MASK: usize = 63; // 64-character lines; bit mask preserves Rust 1.85 MSRV.
+
         let encoded = STANDARD.encode(&self.0);
         let line_count = encoded.len().div_ceil(64);
         let mut output = String::with_capacity(encoded.len() + line_count);
 
-        for line in encoded.as_bytes().chunks(64) {
-            // Base64 output is always ASCII, therefore UTF-8 conversion cannot fail.
-            output.push_str(std::str::from_utf8(line).expect("Base64 is ASCII"));
+        for (index, character) in encoded.chars().enumerate() {
+            output.push(character);
+            if ((index + 1) & LINE_MASK) == 0 {
+                output.push('\n');
+            }
+        }
+
+        if (encoded.len() & LINE_MASK) != 0 {
             output.push('\n');
         }
 
@@ -156,10 +163,7 @@ mod tests {
             SignatureAlgorithm::RsaPkcs1v15Sha256.oid(),
             "1.2.840.113549.1.1.11"
         );
-        assert_eq!(
-            SignatureAlgorithm::EcdsaSha256.oid(),
-            "1.2.840.10045.4.3.2"
-        );
+        assert_eq!(SignatureAlgorithm::EcdsaSha256.oid(), "1.2.840.10045.4.3.2");
         assert_eq!(profile.content_mode, CmsContentMode::Attached);
         assert!(profile.include_certificate);
         assert!(profile.signed_attributes);
