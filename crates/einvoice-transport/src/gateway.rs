@@ -104,7 +104,7 @@ impl UploadNotification {
     pub const INITIAL_RETRY: u32 = 0;
 
     /// Encodes the exact PFS001 JSON shape described by the embedded gateway
-    /// OpenAPI document.
+    /// `OpenAPI` document.
     ///
     /// The gateway schema uses signed 32-bit integers for `quantity`, `size`,
     /// and `retry`; the public model uses non-negative Rust integers and checks
@@ -263,7 +263,7 @@ impl GatewayProcessStatus {
     /// # Errors
     ///
     /// Returns a JSON decoding error if the gateway response does not match the
-    /// embedded OpenAPI response shape.
+    /// embedded `OpenAPI` response shape.
     pub fn from_json(bytes: &[u8]) -> Result<Self, serde_json::Error> {
         serde_json::from_slice(bytes)
     }
