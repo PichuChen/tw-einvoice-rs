@@ -156,10 +156,7 @@ mod tests {
             SignatureAlgorithm::RsaPkcs1v15Sha256.oid(),
             "1.2.840.113549.1.1.11"
         );
-        assert_eq!(
-            SignatureAlgorithm::EcdsaSha256.oid(),
-            "1.2.840.10045.4.3.2"
-        );
+        assert_eq!(SignatureAlgorithm::EcdsaSha256.oid(), "1.2.840.10045.4.3.2");
         assert_eq!(profile.content_mode, CmsContentMode::Attached);
         assert!(profile.include_certificate);
         assert!(profile.signed_attributes);
