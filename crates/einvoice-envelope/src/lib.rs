@@ -128,7 +128,10 @@ impl fmt::Display for EnvelopeError {
             Self::EmptyPayload => f.write_str("MIG payload must not be empty"),
             Self::NoPayloads => f.write_str("invoice envelope requires at least one payload"),
             Self::TooManyPayloads { count, max } => {
-                write!(f, "invoice envelope contains {count} payloads; maximum is {max}")
+                write!(
+                    f,
+                    "invoice envelope contains {count} payloads; maximum is {max}"
+                )
             }
         }
     }
