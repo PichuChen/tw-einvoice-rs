@@ -63,14 +63,21 @@ pub enum RemoteOperation {
 /// boundary.
 #[derive(Debug)]
 pub enum ReceiveError<E> {
-    InvalidRemoteName { name: String },
-    EmptyObject { name: String },
+    InvalidRemoteName {
+        name: String,
+    },
+    EmptyObject {
+        name: String,
+    },
     SizeMismatch {
         name: String,
         expected: u64,
         actual: u64,
     },
-    ConflictingLocalObject { name: String, path: PathBuf },
+    ConflictingLocalObject {
+        name: String,
+        path: PathBuf,
+    },
     Io(io::Error),
     Remote {
         operation: RemoteOperation,
@@ -160,6 +167,7 @@ impl<R> DurableReceiver<R> {
         &self.remote
     }
 
+    #[must_use]
     pub fn remote_mut(&mut self) -> &mut R {
         &mut self.remote
     }
@@ -176,7 +184,10 @@ impl<R: RemoteInbox> DurableReceiver<R> {
     /// delete failure deliberately leaves the durable local copy intact so a
     /// retry can recognize it and finish deletion without applying domain state
     /// twice.
-    pub fn receive(&mut self, object: &RemoteObject) -> Result<ReceiveOutcome, ReceiveError<R::Error>> {
+    pub fn receive(
+        &mut self,
+        object: &RemoteObject,
+    ) -> Result<ReceiveOutcome, ReceiveError<R::Error>> {
         validate_remote_name(&object.name)?;
 
         let final_path = self.inbox_dir.join(&object.name);
@@ -190,7 +201,7 @@ impl<R: RemoteInbox> DurableReceiver<R> {
             })?;
 
         incoming.flush_and_sync()?;
-        let actual_size = incoming.len()?;
+        let actual_size = incoming.size()?;
 
         if actual_size == 0 {
             return Err(ReceiveError::EmptyObject {
@@ -257,9 +268,9 @@ fn validate_remote_name<E>(name: &str) -> Result<(), ReceiveError<E>> {
 }
 
 fn publish_no_clobber(source: &Path, destination: &Path) -> io::Result<()> {
-    // Both files live in the same inbox directory. A hard link therefore gives
-    // us an atomic create-if-absent publication step without rename-overwrite
-    // semantics. The temporary link is removed by IncomingFile::drop.
+    // Both paths live in the same inbox directory. A hard link gives an atomic
+    // create-if-absent publication step without rename-overwrite semantics.
+    // The temporary link is removed by IncomingFile::drop.
     fs::hard_link(source, destination)
 }
 
@@ -330,7 +341,7 @@ impl IncomingFile {
         self.file.sync_all()
     }
 
-    fn len(&self) -> io::Result<u64> {
+    fn size(&self) -> io::Result<u64> {
         Ok(self.file.metadata()?.len())
     }
 }
@@ -362,6 +373,7 @@ mod tests {
     #[derive(Debug)]
     struct FakeRemote {
         bytes: Vec<u8>,
+        download_attempts: usize,
         delete_attempts: usize,
         deleted: bool,
         fail_first_delete: bool,
@@ -371,6 +383,7 @@ mod tests {
         fn new(bytes: impl Into<Vec<u8>>) -> Self {
             Self {
                 bytes: bytes.into(),
+                download_attempts: 0,
                 delete_attempts: 0,
                 deleted: false,
                 fail_first_delete: false,
@@ -386,6 +399,7 @@ mod tests {
             _object: &RemoteObject,
             writer: &mut dyn Write,
         ) -> Result<(), Self::Error> {
+            self.download_attempts += 1;
             writer
                 .write_all(&self.bytes)
                 .map_err(|_| FakeRemoteError("write failed"))
@@ -425,7 +439,7 @@ mod tests {
     fn object(name: &str, bytes: &[u8]) -> RemoteObject {
         RemoteObject {
             name: name.to_owned(),
-            size: bytes.len() as u64,
+            size: bytes.len().try_into().unwrap(),
         }
     }
 
@@ -445,7 +459,10 @@ mod tests {
                 path: directory.0.join("ProcessResult.xml")
             }
         );
-        assert_eq!(fs::read(directory.0.join("ProcessResult.xml")).unwrap(), bytes);
+        assert_eq!(
+            fs::read(directory.0.join("ProcessResult.xml")).unwrap(),
+            bytes
+        );
         assert!(receiver.remote().deleted);
     }
 
@@ -483,7 +500,10 @@ mod tests {
                 ..
             }
         ));
-        assert_eq!(fs::read(directory.0.join("SummaryResult.xml")).unwrap(), bytes);
+        assert_eq!(
+            fs::read(directory.0.join("SummaryResult.xml")).unwrap(),
+            bytes
+        );
         assert!(!receiver.remote().deleted);
 
         let second = receiver.receive(&remote_object).unwrap();
@@ -507,11 +527,11 @@ mod tests {
 
         let error = receiver.receive(&remote_object).unwrap_err();
 
-        assert!(matches!(
-            error,
-            ReceiveError::ConflictingLocalObject { .. }
-        ));
-        assert_eq!(fs::read(directory.0.join("ProcessResult.xml")).unwrap(), b"AAAA");
+        assert!(matches!(error, ReceiveError::ConflictingLocalObject { .. }));
+        assert_eq!(
+            fs::read(directory.0.join("ProcessResult.xml")).unwrap(),
+            b"AAAA"
+        );
         assert!(!receiver.remote().deleted);
     }
 
@@ -525,6 +545,7 @@ mod tests {
         let error = receiver.receive(&remote_object).unwrap_err();
 
         assert!(matches!(error, ReceiveError::InvalidRemoteName { .. }));
+        assert_eq!(receiver.remote().download_attempts, 0);
         assert_eq!(receiver.remote().delete_attempts, 0);
     }
 }
