@@ -293,9 +293,7 @@ mod tests {
             action: "C0401".into(),
             quantity: 3,
             mig_version: "4.1".into(),
-            filename:
-                "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000"
-                    .into(),
+            filename: "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000".into(),
             size: 12_345,
             retry: UploadNotification::INITIAL_RETRY,
             api_version: "3.1.3".into(),
