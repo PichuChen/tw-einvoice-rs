@@ -172,10 +172,12 @@ pub enum FilenameError {
 impl fmt::Display for FilenameError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidPackFilename => {
-                f.write_str("Turnkey pack filename must contain the final from/to/common/count fields")
+            Self::InvalidPackFilename => f.write_str(
+                "Turnkey pack filename must contain the final from/to/common/count fields",
+            ),
+            Self::InvalidPackCount => {
+                f.write_str("Turnkey pack count must be a signed 32-bit integer")
             }
-            Self::InvalidPackCount => f.write_str("Turnkey pack count must be a signed 32-bit integer"),
             Self::InvalidCommonNameParts { actual } => write!(
                 f,
                 "Turnkey common name must contain 9 hyphen-delimited components; got {actual}"
@@ -198,8 +200,7 @@ impl Error for FilenameError {}
 mod tests {
     use super::*;
 
-    const COMMON: &str =
-        "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000";
+    const COMMON: &str = "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000";
 
     #[test]
     fn parses_common_name_with_millisecond_time() {
