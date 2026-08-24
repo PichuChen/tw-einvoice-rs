@@ -99,9 +99,14 @@ impl CmsSignedData {
         let line_count = encoded.len().div_ceil(64);
         let mut output = String::with_capacity(encoded.len() + line_count);
 
-        for line in encoded.as_bytes().chunks(64) {
-            // Base64 output is always ASCII, therefore UTF-8 conversion cannot fail.
-            output.push_str(std::str::from_utf8(line).expect("Base64 is ASCII"));
+        for (index, character) in encoded.chars().enumerate() {
+            output.push(character);
+            if (index + 1).is_multiple_of(64) {
+                output.push('\n');
+            }
+        }
+
+        if !encoded.len().is_multiple_of(64) {
             output.push('\n');
         }
 
