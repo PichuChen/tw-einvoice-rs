@@ -281,8 +281,8 @@ fn files_equal(left: &Path, right: &Path) -> io::Result<bool> {
 
     let mut left = File::open(left)?;
     let mut right = File::open(right)?;
-    let mut left_buffer = [0_u8; 64 * 1024];
-    let mut right_buffer = [0_u8; 64 * 1024];
+    let mut left_buffer = [0_u8; 16 * 1024];
+    let mut right_buffer = [0_u8; 16 * 1024];
 
     loop {
         let left_read = left.read(&mut left_buffer)?;
@@ -322,7 +322,7 @@ impl IncomingFile {
             let path = directory.join(format!(".incoming-{}-{id}", std::process::id()));
             match OpenOptions::new().write(true).create_new(true).open(&path) {
                 Ok(file) => return Ok(Self { path, file }),
-                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => continue,
+                Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
                 Err(error) => return Err(error),
             }
         }
