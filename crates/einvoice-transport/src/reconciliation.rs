@@ -1,8 +1,6 @@
 use std::{
     error::Error,
-    fmt,
-    fs,
-    io,
+    fmt, fs, io,
     path::{Path, PathBuf},
 };
 
@@ -219,11 +217,7 @@ impl<R: RemoteInboxLister> ReconciliationPoller<R> {
     ///
     /// Returns [`PollError::List`] when remote enumeration fails.
     pub fn poll_once(&mut self) -> Result<Vec<PollAttempt<R::Error>>, PollError<R::Error>> {
-        let objects = self
-            .receiver
-            .remote()
-            .list()
-            .map_err(PollError::List)?;
+        let objects = self.receiver.remote().list().map_err(PollError::List)?;
         let mut attempts = Vec::with_capacity(objects.len());
 
         for object in objects {
