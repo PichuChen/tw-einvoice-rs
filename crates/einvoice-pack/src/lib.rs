@@ -5,7 +5,7 @@ use std::{error::Error, fmt};
 use tw_einvoice_envelope::{EnvelopeSerializeError, InvoiceEnvelope};
 use tw_einvoice_signing::{CmsSigner, SignatureAlgorithm};
 
-/// Signed file produced at the Pack/SendFile boundary.
+/// Signed file produced at the Pack/`SendFile` boundary.
 ///
 /// `upload_bytes` are the exact Base64-armored CMS bytes that the official
 /// Turnkey writes to its target file before optional ZIP compression and SFTP
@@ -18,13 +18,13 @@ pub struct SignedArtifact {
 }
 
 impl SignedArtifact {
-    /// Bytes written by Pack and consumed by the SendFile stage.
+    /// Bytes written by Pack and consumed by the `SendFile` stage.
     #[must_use]
     pub fn as_upload_bytes(&self) -> &[u8] {
         &self.upload_bytes
     }
 
-    /// Size reported by current Turnkey PFS001 when ZIP is disabled, and also
+    /// Size reported by current Turnkey `PFS001` when ZIP is disabled, and also
     /// the pre-ZIP size reported by its compatibility quirk when ZIP is enabled.
     #[must_use]
     pub fn turnkey_reported_size(&self) -> usize {
@@ -55,7 +55,7 @@ impl fmt::Debug for SignedArtifact {
 }
 
 /// Serializes an `InvoiceEnvelope`, signs the exact resulting bytes, and applies
-/// the Linux Turnkey Base64 armor expected by SendFile.
+/// the Linux Turnkey Base64 armor expected by `SendFile`.
 ///
 /// # Errors
 ///
