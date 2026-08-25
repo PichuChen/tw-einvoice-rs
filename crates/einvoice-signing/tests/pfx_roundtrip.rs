@@ -77,9 +77,9 @@ fn rsa_pfx_produces_verifiable_turnkey_profile() {
         SignatureAlgorithm::RsaPkcs1v15Sha256
     );
 
-    let signed = signer.sign_attached(CONTENT).unwrap();
-    assert_eq!(&signed.as_encoded()[..2], &[0x30, 0x80]);
-    verify_attached_cms(signed.as_encoded());
+    let cms = signer.sign_attached(CONTENT).unwrap();
+    assert_eq!(&cms.as_encoded()[..2], &[0x30, 0x80]);
+    verify_attached_cms(cms.as_encoded());
 }
 
 #[test]
@@ -95,7 +95,7 @@ fn ec_pfx_produces_verifiable_turnkey_profile() {
         SignatureAlgorithm::EcdsaSha256
     );
 
-    let signed = signer.sign_attached(CONTENT).unwrap();
-    assert_eq!(&signed.as_encoded()[..2], &[0x30, 0x80]);
-    verify_attached_cms(signed.as_encoded());
+    let cms = signer.sign_attached(CONTENT).unwrap();
+    assert_eq!(&cms.as_encoded()[..2], &[0x30, 0x80]);
+    verify_attached_cms(cms.as_encoded());
 }
