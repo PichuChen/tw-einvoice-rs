@@ -5,6 +5,7 @@ members = [
     "crates/einvoice-mig",
     "crates/einvoice-envelope",
     "crates/einvoice-signing",
+    "crates/einvoice-pack",
     "crates/einvoice-results",
     "crates/einvoice-transport",
     "apps/einvoice-cli",
