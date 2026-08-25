@@ -24,9 +24,8 @@ const OID_SHA256_WITH_RSA: [u8; 11] = [
 ];
 
 // OID 1.2.840.10045.4.3.2 (ecdsa-with-SHA256).
-const OID_ECDSA_WITH_SHA256: [u8; 10] = [
-    0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02,
-];
+const OID_ECDSA_WITH_SHA256: [u8; 10] =
+    [0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02];
 
 pub(crate) struct CmsParts<'a> {
     pub content: &'a [u8],
@@ -175,7 +174,12 @@ fn encoded_length_size(length: usize) -> usize {
     if length < 128 {
         1
     } else {
-        1 + ((usize::BITS - length.leading_zeros()) as usize).div_ceil(8)
+        let bytes = length.to_be_bytes();
+        let first_nonzero = bytes
+            .iter()
+            .position(|byte| *byte != 0)
+            .expect("non-short ASN.1 length is nonzero");
+        1 + bytes.len() - first_nonzero
     }
 }
 
@@ -191,9 +195,7 @@ fn write_length(length: usize, output: &mut Vec<u8>) {
         .position(|byte| *byte != 0)
         .expect("non-short ASN.1 length is nonzero");
     let significant = &bytes[first_nonzero..];
-    output.push(
-        0x80 | u8::try_from(significant.len()).expect("usize length-of-length fits in u8"),
-    );
+    output.push(0x80 | u8::try_from(significant.len()).expect("usize length-of-length fits in u8"));
     output.extend_from_slice(significant);
 }
 
@@ -258,10 +260,11 @@ mod tests {
         });
 
         assert!(encoded.windows(14).any(|window| {
-            window == [
-                0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02,
-                0x05, 0x00,
-            ]
+            window
+                == [
+                    0x30, 0x0c, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02, 0x05,
+                    0x00,
+                ]
         }));
     }
 }
