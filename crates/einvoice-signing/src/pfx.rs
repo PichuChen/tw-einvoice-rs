@@ -130,7 +130,9 @@ impl Error for PfxSignerError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::OpenSsl(error) => Some(error),
-            Self::MissingPrivateKey | Self::MissingCertificate | Self::UnsupportedPrivateKey => None,
+            Self::MissingPrivateKey | Self::MissingCertificate | Self::UnsupportedPrivateKey => {
+                None
+            }
         }
     }
 }
