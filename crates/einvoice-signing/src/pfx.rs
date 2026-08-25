@@ -20,7 +20,7 @@ use crate::{
 /// OpenSSL is deliberately used only for key/certificate parsing and the
 /// private-key signature operation. CMS construction is performed by this crate
 /// so the resulting ASN.1 profile matches the official Turnkey 3.2.1 output,
-/// including its BER framing and SignerInfo algorithm identifiers.
+/// including its BER framing and `SignerInfo` algorithm identifiers.
 pub struct PfxSigner {
     private_key: PKey<Private>,
     certificate: X509,
