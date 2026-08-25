@@ -256,7 +256,10 @@ impl fmt::Display for SubmissionConsistencyError {
                 write!(f, "Turnkey filename contains invalid pack count {count}")
             }
             Self::EnvelopeCountOutOfRange { count } => {
-                write!(f, "envelope message count {count} cannot be represented in PFS001")
+                write!(
+                    f,
+                    "envelope message count {count} cannot be represented in PFS001"
+                )
             }
             Self::CountMismatch {
                 envelope_count,
