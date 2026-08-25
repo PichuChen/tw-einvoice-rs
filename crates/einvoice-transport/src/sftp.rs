@@ -3,7 +3,7 @@ use std::{
     fmt,
     io::{self, Write},
     net::{TcpStream, ToSocketAddrs},
-    path::{Path, PathBuf},
+    path::PathBuf,
     time::Duration,
 };
 
@@ -117,7 +117,10 @@ impl Ssh2SftpUploader {
         }
 
         Err(SftpUploadError::Io(last_error.unwrap_or_else(|| {
-            io::Error::new(io::ErrorKind::NotFound, "SFTP host resolved to no addresses")
+            io::Error::new(
+                io::ErrorKind::NotFound,
+                "SFTP host resolved to no addresses",
+            )
         })))
     }
 
@@ -178,7 +181,7 @@ impl ObjectUploader for Ssh2SftpUploader {
         let session = self.connect_session()?;
         let sftp = session.sftp()?;
         let remote_path = self.config.upload_directory.join(remote_filename);
-        let mut remote_file = sftp.create(Path::new(&remote_path))?;
+        let mut remote_file = sftp.create(&remote_path)?;
         remote_file.write_all(bytes)?;
         remote_file.flush()?;
         remote_file.close()?;
@@ -220,7 +223,10 @@ impl fmt::Display for SftpUploadError {
             }
             Self::MissingHostKey => f.write_str("SFTP server did not present a host key"),
             Self::HostKeyNotFound { host, port } => {
-                write!(f, "SFTP host key for {host}:{port} is not present in known_hosts")
+                write!(
+                    f,
+                    "SFTP host key for {host}:{port} is not present in known_hosts"
+                )
             }
             Self::HostKeyMismatch { host, port } => write!(
                 f,
