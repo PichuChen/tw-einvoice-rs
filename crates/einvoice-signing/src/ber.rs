@@ -27,6 +27,7 @@ const OID_SHA256_WITH_RSA: [u8; 11] = [
 const OID_ECDSA_WITH_SHA256: [u8; 10] =
     [0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x04, 0x03, 0x02];
 
+#[derive(Debug)]
 pub(crate) struct CmsParts<'a> {
     pub content: &'a [u8],
     pub certificate_der: &'a [u8],
@@ -201,6 +202,8 @@ fn write_length(length: usize, output: &mut Vec<u8>) {
 
 #[cfg(test)]
 mod tests {
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+
     use super::*;
 
     fn decode_hex(value: &str) -> Vec<u8> {
@@ -238,6 +241,90 @@ mod tests {
             "0401aa",
             "000000000000"
         ));
+
+        assert_eq!(encoded, expected);
+    }
+
+    #[test]
+    fn matches_official_turnkey_rsa_fixture_byte_for_byte() {
+        // Synthetic fixture generated with the official Turnkey 3.2.1
+        // `cht-kms-core` signer. No production certificate, key, or invoice data
+        // is used. The private key is intentionally not part of this fixture:
+        // these are the already-produced signature inputs needed to pin the CMS
+        // envelope byte profile independently of the cryptographic backend.
+        let certificate_der = STANDARD
+            .decode(concat!(
+                "MIIDFzCCAf+gAwIBAgIUGVLSpis0l/HCnII86Vp+kGhikpgwDQYJKoZIhvcNAQEL",
+                "BQAwGzEZMBcGA1UEAwwQdHctZWludm9pY2UtdGVzdDAeFw0yNjA4MjUwNjMxMTZa",
+                "Fw0yNjA4MjYwNjMxMTZaMBsxGTAXBgNVBAMMEHR3LWVpbnZvaWNlLXRlc3QwggEi",
+                "MA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDPKdj6Ug3M6s8Y5Vc3peuKT5Fr",
+                "nGM/TuD8jMQVxzkNNKCzPzDMpd5epARpdy6EX6ezUmez2LTeXzh1p6jGyDAIGnFc",
+                "1lTAQkd1QqyIHhkYu/yliM1wYfIwsUw4oFWPLbsiJQ9ZY4XKSd8RGYZgBVwgjBl2",
+                "9NnxMCCqEXKkx5LT2FM3RDVTkHSmYxTOS1dP07bhLJH1GE9opidMcN/Ety2qtjCV",
+                "hGbeFu49nKIIeHqC0LlcLsA263oa3CuexuVAEorAXRMAAUNqeB2FQ1go1fFGCx8c",
+                "UQZm8gCGY4DwBMNtuN1BruljZNMO5rTTUSd7I9GncoZ0qr+V2oeuB+Na71cxAgMB",
+                "AAGjUzBRMB0GA1UdDgQWBBTSjGMzU3gCioUxNKdQA+I20YkmAzAfBgNVHSMEGDAW",
+                "gBTSjGMzU3gCioUxNKdQA+I20YkmAzAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3",
+                "DQEBCwUAA4IBAQCmEp98FsmUqYm+ADgbZlVC7BNJUKOUfkxrNpNC2VtMuvQmEruF",
+                "szyaT2hBLNoNxkLyuUBnTNagE7mWaHRzaxrS4J96CexdtGS0t0dNVP2Tuy5e1hil",
+                "EjkFb69zP7fFX6FuyrRIgEu8C2NVQeRR4+w+EF1t3Gx1bnaqF2GJ5VCDFGST96+c",
+                "enTo7FhTVz9g5Iq2yA/JNPbG8wQJUvFhT+57CXwPimsGEC5kRY3x2q36eH/BKEAZ",
+                "sflvdEJ3aj/GYwcckDae/IbsURHWnSi3tYGPG8rjIyh8FMhWqbRF3EizS5a4gFY/",
+                "S8zz0vBQ1kLqO5oaZUTXsNOB/kuyk2ZRdoUs"
+            ))
+            .unwrap();
+        let issuer_name_der =
+            decode_hex("301b3119301706035504030c1074772d65696e766f6963652d74657374");
+        let serial_number = decode_hex("1952d2a62b3497f1c29c823ce95a7e9068629298");
+        let signature = STANDARD
+            .decode(concat!(
+                "H/1vmBveO/zgDjXANaSA/se3zYemxfcPG7hmi/xlPklUZ0P9Nf2jgQdLJIcF2ya8",
+                "nemYLqIOzAg/7qcj6MqHkQRtR3x7frhOh8KlE2sElLhpROH+aKGIMapx9F4vmoX",
+                "bWZPMtjUZlUbUWZGcqELNJb1tgMMNW6U9qEK9WUopFsqfWqRRCEb5/jBGIM2/lu",
+                "EZBiF1Z0wfvM9bjPkeuxmrCiFvkBLZtos3m57lS9mj0fVZi/l9btSuU9/f9u/OX",
+                "zNpmsrvOzkCBQmiX86jIdSiXLhWixEqdHOfND6YHM3hSBWDin25wmBKdZ9rXHVI",
+                "RaBW5q60Rh4H9a+AmurRd99G4A=="
+            ))
+            .unwrap();
+        let expected = STANDARD
+            .decode(concat!(
+                "MIAGCSqGSIb3DQEHAqCAMIACAQExDzANBglghkgBZQMEAgEFADCABgkqhkiG9w0B",
+                "BwGggAQNaGVsbG8tdHVybmtleQAAAACggDCCAxcwggH/oAMCAQICFBlS0qYrNJfx",
+                "wpyCPOlafpBoYpKYMA0GCSqGSIb3DQEBCwUAMBsxGTAXBgNVBAMMEHR3LWVpbnZv",
+                "aWNlLXRlc3QwHhcNMjYwODI1MDYzMTE2WhcNMjYwODI2MDYzMTE2WjAbMRkwFwYD",
+                "VQQDDBB0dy1laW52b2ljZS10ZXN0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB",
+                "CgKCAQEAzynY+lINzOrPGOVXN6Xrik+Ra5xjP07g/IzEFcc5DTSgsz8wzKXeXqQE",
+                "aXcuhF+ns1Jns9i03l84daeoxsgwCBpxXNZUwEJHdUKsiB4ZGLv8pYjNcGHyMLFM",
+                "OKBVjy27IiUPWWOFyknfERmGYAVcIIwZdvTZ8TAgqhFypMeS09hTN0Q1U5B0pmMU",
+                "zktXT9O24SyR9RhPaKYnTHDfxLctqrYwlYRm3hbuPZyiCHh6gtC5XC7ANut6Gtwr",
+                "nsblQBKKwF0TAAFDangdhUNYKNXxRgsfHFEGZvIAhmOA8ATDbbjdQa7pY2TTDua0",
+                "01EneyPRp3KGdKq/ldqHrgfjWu9XMQIDAQABo1MwUTAdBgNVHQ4EFgQU0oxjM1N4",
+                "AoqFMTSnUAPiNtGJJgMwHwYDVR0jBBgwFoAU0oxjM1N4AoqFMTSnUAPiNtGJJgMw",
+                "DwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAphKffBbJlKmJvgA4",
+                "G2ZVQuwTSVCjlH5MazaTQtlbTLr0JhK7hbM8mk9oQSzaDcZC8rlAZ0zWoBO5lmh0",
+                "c2sa0uCfegnsXbRktLdHTVT9k7suXtYYpRI5BW+vcz+3xV+hbsq0SIBLvAtjVUHk",
+                "UePsPhBdbdxsdW52qhdhieVQgxRkk/evnHp06OxYU1c/YOSKtsgPyTT2xvMECVLx",
+                "YU/uewl8D4prBhAuZEWN8dqt+nh/wShAGbH5b3RCd2o/xmMHHJA2nvyG7FER1p0o",
+                "t7WBjxvK4yMofBTIVqm0RdxIs0uWuIBWP0vM89LwUNZC6juaGmVE17DTgf5LspNm",
+                "UXaFLAAAMYIBXjCCAVoCAQEwMzAbMRkwFwYDVQQDDBB0dy1laW52b2ljZS10ZXN0",
+                "AhQZUtKmKzSX8cKcgjzpWn6QaGKSmDANBglghkgBZQMEAgEFADANBgkqhkiG9w0B",
+                "AQsFAASCAQAf/W+YG947/OAONcA1pID+x7fNh6bF9w8buGaL/GU+SVRnQ/01/aOB",
+                "B0skhwXbJryd6Zguog7MCD/upyPoyoeRBG1HfHt+uE6HwqUTawSUuGlE4f5ooYgx",
+                "qnH0Xi+ahdtZk8y2NRmVRtRZkZyoQs0lvW2Aww1bpT2oQr1ZSikWyp9apFEIRvn",
+                "+MEYgzb+W4RkGIXVnTB+8z1uM+R67GasKIW+QEtm2izebnuVL2aPR9VmL+X1u1K5",
+                "T39/2785fM2mayu87OQIFCaJfzqMh1KJcuFaLESp0c580PpgczeFIFYOKfbnCYEp1",
+                "n2tcdUhFoFbmrrRGHgf1r4Ca6tF330bgAAAAAAAA"
+            ))
+            .unwrap();
+
+        let encoded = encode_turnkey_signed_data(&CmsParts {
+            content: b"hello-turnkey",
+            certificate_der: &certificate_der,
+            issuer_name_der: &issuer_name_der,
+            serial_number: &serial_number,
+            signature_algorithm: SignatureAlgorithm::RsaPkcs1v15Sha256,
+            signature: &signature,
+        });
 
         assert_eq!(encoded, expected);
     }

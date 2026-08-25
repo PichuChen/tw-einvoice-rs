@@ -36,12 +36,18 @@ impl PfxSigner {
     /// # Errors
     ///
     /// Returns [`PfxSignerError`] when the PKCS#12 object cannot be parsed, does
-    /// not contain both a private key and certificate, or contains a key type
-    /// outside the RSA/EC profile observed in Turnkey 3.2.1.
+    /// not contain both a private key and certificate, contains a mismatched
+    /// key/certificate pair, or uses a key type outside the RSA/EC profile
+    /// observed in Turnkey 3.2.1.
     pub fn from_der(pfx_der: &[u8], password: &str) -> Result<Self, PfxSignerError> {
         let parsed = Pkcs12::from_der(pfx_der)?.parse2(password)?;
         let private_key = parsed.pkey.ok_or(PfxSignerError::MissingPrivateKey)?;
         let certificate = parsed.cert.ok_or(PfxSignerError::MissingCertificate)?;
+
+        let certificate_key = certificate.public_key()?;
+        if !certificate_key.public_eq(&private_key) {
+            return Err(PfxSignerError::MismatchedKeyPair);
+        }
 
         let signature_algorithm = match private_key.id() {
             Id::RSA => SignatureAlgorithm::RsaPkcs1v15Sha256,
@@ -108,6 +114,7 @@ pub enum PfxSignerError {
     OpenSsl(ErrorStack),
     MissingPrivateKey,
     MissingCertificate,
+    MismatchedKeyPair,
     UnsupportedPrivateKey,
 }
 
@@ -118,6 +125,9 @@ impl fmt::Display for PfxSignerError {
             Self::MissingPrivateKey => f.write_str("PKCS#12 object does not contain a private key"),
             Self::MissingCertificate => {
                 f.write_str("PKCS#12 object does not contain a signing certificate")
+            }
+            Self::MismatchedKeyPair => {
+                f.write_str("PKCS#12 private key does not match the signing certificate")
             }
             Self::UnsupportedPrivateKey => {
                 f.write_str("Turnkey compatibility signer supports only RSA and EC private keys")
@@ -130,9 +140,10 @@ impl Error for PfxSignerError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::OpenSsl(error) => Some(error),
-            Self::MissingPrivateKey | Self::MissingCertificate | Self::UnsupportedPrivateKey => {
-                None
-            }
+            Self::MissingPrivateKey
+            | Self::MissingCertificate
+            | Self::MismatchedKeyPair
+            | Self::UnsupportedPrivateKey => None,
         }
     }
 }
