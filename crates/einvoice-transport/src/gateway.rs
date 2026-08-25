@@ -1,5 +1,6 @@
-use std::{error::Error, fmt};
+use std::{error::Error, fmt, time::Duration};
 
+use reqwest::{StatusCode, blocking::Client};
 use serde::{Deserialize, Serialize};
 
 /// Service mode used by the MOF gateway upload-notification API.
@@ -269,6 +270,159 @@ impl GatewayProcessStatus {
     }
 }
 
+/// Abstraction used by the native submit pipeline to notify the platform after
+/// an SFTP object is durably uploaded.
+pub trait GatewayNotifier {
+    type Error;
+
+    /// Sends one PFS001 upload notification.
+    ///
+    /// # Errors
+    ///
+    /// Returns the concrete notifier error when encoding, HTTP transport, HTTP
+    /// status handling, or response decoding fails.
+    fn notify(&self, notification: &UploadNotification) -> Result<GatewayProcessStatus, Self::Error>;
+}
+
+/// Blocking PFS001 client suitable for a dedicated Turnkey-compatible worker.
+///
+/// The current platform contract requires the same transport ID/password in
+/// HTTP Basic authentication and in the JSON body. Credentials are retained in
+/// memory but are always redacted from `Debug` output.
+pub struct Pfs001HttpClient {
+    client: Client,
+    endpoint: String,
+    credentials: GatewayCredentials,
+}
+
+impl Pfs001HttpClient {
+    pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(120);
+    pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+
+    /// Builds a client from the configured gateway base URL, for example
+    /// `https://tgw.einvoice.nat.gov.tw/gateway/api`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Pfs001HttpError::ClientBuild`] if the HTTP client cannot be
+    /// constructed.
+    pub fn new(
+        base_url: impl AsRef<str>,
+        credentials: GatewayCredentials,
+    ) -> Result<Self, Pfs001HttpError> {
+        Self::with_timeout(base_url, credentials, Self::DEFAULT_TIMEOUT)
+    }
+
+    /// Builds a client with an explicit overall request timeout.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Pfs001HttpError::ClientBuild`] if the HTTP client cannot be
+    /// constructed.
+    pub fn with_timeout(
+        base_url: impl AsRef<str>,
+        credentials: GatewayCredentials,
+        timeout: Duration,
+    ) -> Result<Self, Pfs001HttpError> {
+        let endpoint = format!(
+            "{}/pfs001i/uploadInvoiceMessage",
+            base_url.as_ref().trim_end_matches('/')
+        );
+        let client = Client::builder()
+            .connect_timeout(Self::CONNECT_TIMEOUT)
+            .timeout(timeout)
+            .build()
+            .map_err(Pfs001HttpError::ClientBuild)?;
+
+        Ok(Self {
+            client,
+            endpoint,
+            credentials,
+        })
+    }
+
+    #[must_use]
+    pub fn endpoint(&self) -> &str {
+        &self.endpoint
+    }
+}
+
+impl fmt::Debug for Pfs001HttpClient {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Pfs001HttpClient")
+            .field("endpoint", &self.endpoint)
+            .field("credentials", &self.credentials)
+            .finish_non_exhaustive()
+    }
+}
+
+impl GatewayNotifier for Pfs001HttpClient {
+    type Error = Pfs001HttpError;
+
+    fn notify(&self, notification: &UploadNotification) -> Result<GatewayProcessStatus, Self::Error> {
+        let body = notification
+            .to_pfs001_json(&self.credentials)
+            .map_err(Pfs001HttpError::Encode)?;
+
+        let response = self
+            .client
+            .post(&self.endpoint)
+            .basic_auth(
+                self.credentials.login_id.as_str(),
+                Some(self.credentials.login_password.as_str()),
+            )
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body)
+            .send()
+            .map_err(Pfs001HttpError::Request)?;
+
+        let status = response.status();
+        let response_body = response.bytes().map_err(Pfs001HttpError::Request)?;
+        if !status.is_success() {
+            return Err(Pfs001HttpError::HttpStatus {
+                status,
+                body: String::from_utf8_lossy(&response_body).into_owned(),
+            });
+        }
+
+        GatewayProcessStatus::from_json(&response_body).map_err(Pfs001HttpError::Decode)
+    }
+}
+
+#[derive(Debug)]
+pub enum Pfs001HttpError {
+    ClientBuild(reqwest::Error),
+    Encode(GatewayEncodeError),
+    Request(reqwest::Error),
+    HttpStatus { status: StatusCode, body: String },
+    Decode(serde_json::Error),
+}
+
+impl fmt::Display for Pfs001HttpError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ClientBuild(error) => write!(f, "failed to build PFS001 HTTP client: {error}"),
+            Self::Encode(error) => write!(f, "failed to encode PFS001 request: {error}"),
+            Self::Request(error) => write!(f, "PFS001 HTTP request failed: {error}"),
+            Self::HttpStatus { status, body } => {
+                write!(f, "PFS001 returned HTTP {status}: {body}")
+            }
+            Self::Decode(error) => write!(f, "failed to decode PFS001 response: {error}"),
+        }
+    }
+}
+
+impl Error for Pfs001HttpError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::ClientBuild(error) | Self::Request(error) => Some(error),
+            Self::Encode(error) => Some(error),
+            Self::Decode(error) => Some(error),
+            Self::HttpStatus { .. } => None,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -319,6 +473,23 @@ mod tests {
         let rendered = format!("{credentials:?}");
         assert!(rendered.contains("transport-id"));
         assert!(rendered.contains("[REDACTED]"));
+        assert!(!rendered.contains("super-secret"));
+    }
+
+    #[test]
+    fn http_client_debug_output_redacts_password_and_normalizes_endpoint() {
+        let client = Pfs001HttpClient::new(
+            "https://example.invalid/gateway/api/",
+            GatewayCredentials::new("transport-id", "super-secret"),
+        )
+        .unwrap();
+        let rendered = format!("{client:?}");
+
+        assert_eq!(
+            client.endpoint(),
+            "https://example.invalid/gateway/api/pfs001i/uploadInvoiceMessage"
+        );
+        assert!(rendered.contains("transport-id"));
         assert!(!rendered.contains("super-secret"));
     }
 
