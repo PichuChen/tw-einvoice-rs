@@ -65,7 +65,7 @@ impl DurableInboundRecord {
     /// Platform message IDs that can be used to correlate this result with
     /// durable submission state.
     ///
-    /// ProcessResult carries one `MessageInfo/Id`; SummaryResult may contain up
+    /// `ProcessResult` carries one `MessageInfo/Id`; `SummaryResult` may contain up
     /// to 5,000 `DetailList/Message/Info/Id` values.
     #[must_use]
     pub fn correlation_ids(&self) -> Vec<&str> {
