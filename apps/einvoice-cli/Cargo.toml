@@ -7,5 +7,12 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[dependencies]
+tw-einvoice-client = { path = "../../crates/einvoice-client" }
+tw-einvoice-core = { path = "../../crates/einvoice-core" }
+tw-einvoice-envelope = { path = "../../crates/einvoice-envelope" }
+tw-einvoice-signing = { path = "../../crates/einvoice-signing" }
+tw-einvoice-transport = { path = "../../crates/einvoice-transport" }
+
 [lints]
 workspace = true
