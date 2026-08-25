@@ -65,9 +65,7 @@ pub fn pack_and_sign<S: CmsSigner>(
     envelope: &InvoiceEnvelope,
     signer: &S,
 ) -> Result<SignedArtifact, PackError<S::Error>> {
-    let envelope_bytes = envelope
-        .to_turnkey_xml()
-        .map_err(PackError::Envelope)?;
+    let envelope_bytes = envelope.to_turnkey_xml().map_err(PackError::Envelope)?;
     let envelope_size = envelope_bytes.len();
     let signature_algorithm = signer.signature_algorithm();
     let cms = signer
@@ -162,10 +160,13 @@ mod tests {
                 message_type: "F0401".into(),
                 version: MigVersion::V4_1,
             },
-            vec![MigPayload::new(
-                br#"<Invoice xmlns="urn:GEINV:eInvoiceMessage:F0401:4.1"><Main/></Invoice>"#.to_vec(),
-            )
-            .unwrap()],
+            vec![
+                MigPayload::new(
+                    br#"<Invoice xmlns="urn:GEINV:eInvoiceMessage:F0401:4.1"><Main/></Invoice>"#
+                        .to_vec(),
+                )
+                .unwrap(),
+            ],
         )
         .unwrap()
     }
@@ -184,7 +185,10 @@ mod tests {
             artifact.signature_algorithm(),
             SignatureAlgorithm::RsaPkcs1v15Sha256
         );
-        assert_eq!(artifact.turnkey_reported_size(), artifact.as_upload_bytes().len());
+        assert_eq!(
+            artifact.turnkey_reported_size(),
+            artifact.as_upload_bytes().len()
+        );
         assert!(artifact.as_upload_bytes().ends_with(b"\n"));
     }
 
