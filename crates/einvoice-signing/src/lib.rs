@@ -43,12 +43,21 @@ pub enum CmsContentMode {
     Attached,
 }
 
+/// ASN.1 encoding profile emitted by the official Turnkey KMS generator.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum CmsEncoding {
+    /// Streaming BER with indefinite-length containers.
+    BerIndefiniteLength,
+}
+
 /// The normalized signing profile recovered from Turnkey 3.2.1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TurnkeyCmsProfile {
     pub digest: DigestAlgorithm,
     pub content_mode: CmsContentMode,
+    pub encoding: CmsEncoding,
     pub include_certificate: bool,
+    /// Turnkey uses direct CMS signatures; `SignerInfo.signedAttrs` is absent.
     pub signed_attributes: bool,
 }
 
@@ -57,45 +66,50 @@ impl Default for TurnkeyCmsProfile {
         Self {
             digest: DigestAlgorithm::Sha256,
             content_mode: CmsContentMode::Attached,
+            encoding: CmsEncoding::BerIndefiniteLength,
             include_certificate: true,
-            signed_attributes: true,
+            signed_attributes: false,
         }
     }
 }
 
-/// DER-encoded CMS `SignedData` before the Turnkey transport armor is applied.
+/// Encoded CMS `SignedData` before Turnkey transport armor is applied.
+///
+/// Compatibility mode expects the BER streaming representation emitted by the
+/// official KMS implementation rather than assuming canonical DER.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CmsSignedData(Vec<u8>);
 
 impl CmsSignedData {
-    /// Wraps DER bytes produced by a concrete CMS implementation.
+    /// Wraps CMS bytes produced by a concrete backend.
     ///
     /// # Errors
     ///
-    /// Returns [`SignedDataError::Empty`] when no DER bytes were supplied.
-    pub fn from_der(der: impl Into<Vec<u8>>) -> Result<Self, SignedDataError> {
-        let der = der.into();
-        if der.is_empty() {
+    /// Returns [`SignedDataError::Empty`] when no encoded CMS bytes were supplied.
+    pub fn from_encoded(bytes: impl Into<Vec<u8>>) -> Result<Self, SignedDataError> {
+        let bytes = bytes.into();
+        if bytes.is_empty() {
             Err(SignedDataError::Empty)
         } else {
-            Ok(Self(der))
+            Ok(Self(bytes))
         }
     }
 
     #[must_use]
-    pub fn as_der(&self) -> &[u8] {
+    pub fn as_encoded(&self) -> &[u8] {
         &self.0
     }
 
-    /// Produces the text representation emitted by Turnkey 3.2.1.
+    /// Produces the text representation emitted by the Linux Turnkey 3.2.1 runtime.
     ///
-    /// The CMS DER is standard Base64 encoded, wrapped at 64 characters, has
-    /// no PEM `BEGIN/END PKCS7` markers, and ends with a line feed. This method
-    /// uses LF deliberately so output is stable across build hosts and matches
-    /// the Linux distribution under investigation.
+    /// The CMS bytes are standard Base64 encoded, wrapped at 64 characters, have
+    /// no PEM `BEGIN/END PKCS7` markers, and end with a newline. The official
+    /// armor stream uses the JVM native line separator; the Linux distribution
+    /// therefore emits LF. Keeping LF explicit here makes container behavior
+    /// deterministic and matches the recovered Linux interoperability profile.
     #[must_use]
     pub fn to_turnkey_armored(&self) -> String {
-        const LINE_MASK: usize = 63; // 64-character lines; bit mask preserves Rust 1.85 MSRV.
+        const LINE_MASK: usize = 63; // 64-character lines.
 
         let encoded = STANDARD.encode(&self.0);
         let line_count = encoded.len().div_ceil(64);
@@ -124,7 +138,7 @@ pub enum SignedDataError {
 impl std::fmt::Display for SignedDataError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Empty => f.write_str("CMS SignedData DER must not be empty"),
+            Self::Empty => f.write_str("encoded CMS SignedData must not be empty"),
         }
     }
 }
@@ -134,9 +148,9 @@ impl std::error::Error for SignedDataError {}
 /// Cryptographic boundary for software certificates, smart cards, or HSMs.
 ///
 /// Concrete implementations are responsible for producing attached CMS
-/// `SignedData` using the profile above. Keeping key access behind this trait
-/// lets the daemon support PFX today and PKCS#11/HSM backends without coupling
-/// transport logic to private-key storage.
+/// `SignedData` using the compatibility profile above. Keeping key access behind
+/// this trait lets the daemon support PFX today and PKCS#11/HSM backends without
+/// coupling transport logic to private-key storage.
 pub trait CmsSigner {
     type Error;
 
@@ -165,14 +179,15 @@ mod tests {
         );
         assert_eq!(SignatureAlgorithm::EcdsaSha256.oid(), "1.2.840.10045.4.3.2");
         assert_eq!(profile.content_mode, CmsContentMode::Attached);
+        assert_eq!(profile.encoding, CmsEncoding::BerIndefiniteLength);
         assert!(profile.include_certificate);
-        assert!(profile.signed_attributes);
+        assert!(!profile.signed_attributes);
     }
 
     #[test]
     fn armor_wraps_at_sixty_four_characters_without_pem_markers() {
         // 48 zero bytes encode to exactly 64 Base64 characters.
-        let signed = CmsSignedData::from_der(vec![0; 48]).unwrap();
+        let signed = CmsSignedData::from_encoded(vec![0; 48]).unwrap();
         let armored = signed.to_turnkey_armored();
 
         assert_eq!(armored, format!("{}\n", "A".repeat(64)));
@@ -182,7 +197,7 @@ mod tests {
 
     #[test]
     fn armor_wraps_subsequent_lines_and_keeps_final_newline() {
-        let signed = CmsSignedData::from_der(vec![0; 49]).unwrap();
+        let signed = CmsSignedData::from_encoded(vec![0; 49]).unwrap();
         let armored = signed.to_turnkey_armored();
         let lines: Vec<&str> = armored.lines().collect();
 
