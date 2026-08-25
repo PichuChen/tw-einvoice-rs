@@ -2,7 +2,10 @@
 
 pub mod filename;
 pub mod gateway;
+pub mod native;
+pub mod package;
 pub mod receiver;
+pub mod sftp;
 
 use tw_einvoice_core::SubmissionState;
 
