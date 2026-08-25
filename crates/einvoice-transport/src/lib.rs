@@ -5,6 +5,7 @@ pub mod gateway;
 pub mod inbound;
 pub mod native;
 pub mod package;
+pub mod packed;
 pub mod receiver;
 pub mod reconciliation;
 pub mod sftp;

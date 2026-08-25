@@ -13,8 +13,13 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 ssh2 = "0.9.6"
 tw-einvoice-core = { path = "../einvoice-core" }
+tw-einvoice-pack = { path = "../einvoice-pack" }
 tw-einvoice-results = { path = "../einvoice-results" }
 zip = { version = "5.1.1", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tw-einvoice-envelope = { path = "../einvoice-envelope" }
+tw-einvoice-signing = { path = "../einvoice-signing" }
 
 [lints]
 workspace = true
