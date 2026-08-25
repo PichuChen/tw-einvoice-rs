@@ -140,8 +140,7 @@ impl Error for InboundParseError {
 mod tests {
     use super::*;
 
-    const COMMON: &str =
-        "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000";
+    const COMMON: &str = "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000";
 
     #[test]
     fn classifier_matches_receivefile_suffix_precedence() {
@@ -165,7 +164,10 @@ mod tests {
             classify_remote_name(COMMON),
             InboundObjectKind::Invoice(_)
         ));
-        assert_eq!(classify_remote_name("garbage.bin"), InboundObjectKind::Unknown);
+        assert_eq!(
+            classify_remote_name("garbage.bin"),
+            InboundObjectKind::Unknown
+        );
     }
 
     #[test]
@@ -193,8 +195,10 @@ mod tests {
             .unwrap();
         assert!(matches!(parsed, ParsedReconciliation::Process(_)));
 
-        assert!(parse_reconciliation(&InboundObjectKind::ExchangeAck, xml)
-            .unwrap()
-            .is_none());
+        assert!(
+            parse_reconciliation(&InboundObjectKind::ExchangeAck, xml)
+                .unwrap()
+                .is_none()
+        );
     }
 }
