@@ -49,8 +49,8 @@ pub fn prepare_upload_object(
         });
     }
 
-    let notification_size = u64::try_from(signed_bytes.len())
-        .map_err(|_| PrepareUploadError::LengthOutOfRange)?;
+    let notification_size =
+        u64::try_from(signed_bytes.len()).map_err(|_| PrepareUploadError::LengthOutOfRange)?;
 
     let uploaded_bytes = match zip_mode {
         ZipMode::Plain => signed_bytes.to_vec(),
@@ -92,13 +92,8 @@ fn validate_basename(field: &'static str, value: &str) -> Result<(), PrepareUplo
 
 #[derive(Debug)]
 pub enum PrepareUploadError {
-    InvalidFilename {
-        field: &'static str,
-    },
-    SourceTooLarge {
-        actual: usize,
-        maximum: usize,
-    },
+    InvalidFilename { field: &'static str },
+    SourceTooLarge { actual: usize, maximum: usize },
     LengthOutOfRange,
     Zip(ZipError),
     Io(std::io::Error),
@@ -108,7 +103,10 @@ impl fmt::Display for PrepareUploadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidFilename { field } => {
-                write!(f, "{field} must be a non-empty basename without path separators")
+                write!(
+                    f,
+                    "{field} must be a non-empty basename without path separators"
+                )
             }
             Self::SourceTooLarge { actual, maximum } => write!(
                 f,
@@ -126,9 +124,9 @@ impl Error for PrepareUploadError {
         match self {
             Self::Zip(error) => Some(error),
             Self::Io(error) => Some(error),
-            Self::InvalidFilename { .. }
-            | Self::SourceTooLarge { .. }
-            | Self::LengthOutOfRange => None,
+            Self::InvalidFilename { .. } | Self::SourceTooLarge { .. } | Self::LengthOutOfRange => {
+                None
+            }
         }
     }
 }
