@@ -2,10 +2,13 @@
 
 pub mod filename;
 pub mod gateway;
+pub mod inbound;
 pub mod native;
 pub mod package;
 pub mod receiver;
+pub mod reconciliation;
 pub mod sftp;
+mod sftp_reconciliation;
 
 use tw_einvoice_core::SubmissionState;
 
