@@ -12,11 +12,11 @@ use crate::{
     sftp::ObjectUploader,
 };
 
-/// Submission request at the boundary between the Pack and native SendFile
+/// Submission request at the boundary between the Pack and native `SendFile`
 /// stages.
 ///
 /// Unlike [`NativeSubmissionRequest`], this request does not let callers provide
-/// raw signed bytes, a remote filename, or the PFS001 size independently. Those
+/// raw signed bytes, a remote filename, or the `PFS001` size independently. Those
 /// values are derived from the already-produced [`SignedArtifact`] and
 /// [`TurnkeyPackFilename`] so transport metadata cannot silently diverge from
 /// the object that is actually uploaded.
@@ -34,10 +34,10 @@ where
     N: GatewayNotifier,
 {
     /// Submits a signed Pack artifact using Turnkey-compatible filename, ZIP,
-    /// SFTP, and PFS001 semantics.
+    /// SFTP, and `PFS001` semantics.
     ///
     /// The pack count embedded in the local filename is validated against the
-    /// PFS001 `quantity` before any network operation. This prevents a malformed
+    /// `PFS001` `quantity` before any network operation. This prevents a malformed
     /// or stale filename from producing an upload whose notification describes
     /// a different number of enclosed MIG messages.
     ///
@@ -99,7 +99,10 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidPackCount { count } => {
-                write!(f, "Turnkey pack filename contains non-positive count {count}")
+                write!(
+                    f,
+                    "Turnkey pack filename contains non-positive count {count}"
+                )
             }
             Self::QuantityMismatch {
                 filename_count,
@@ -227,10 +230,13 @@ mod tests {
                 message_type: "F0401".into(),
                 version: MigVersion::V4_1,
             },
-            vec![MigPayload::new(
-                br#"<Invoice xmlns="urn:GEINV:eInvoiceMessage:F0401:4.1"><Main/></Invoice>"#.to_vec(),
-            )
-            .unwrap()],
+            vec![
+                MigPayload::new(
+                    br#"<Invoice xmlns="urn:GEINV:eInvoiceMessage:F0401:4.1"><Main/></Invoice>"#
+                        .to_vec(),
+                )
+                .unwrap(),
+            ],
         )
         .unwrap()
     }
@@ -265,10 +271,8 @@ mod tests {
     fn derives_zip_upload_and_pfs001_from_pack_artifact() {
         let artifact = pack_and_sign(&envelope(), &SyntheticSigner).unwrap();
         let filename = filename();
-        let submitter = NativeSubmitter::new(
-            RecordingUploader::default(),
-            RecordingNotifier::default(),
-        );
+        let submitter =
+            NativeSubmitter::new(RecordingUploader::default(), RecordingNotifier::default());
         let request = PackArtifactSubmission {
             filename: &filename,
             artifact: &artifact,
@@ -308,10 +312,8 @@ mod tests {
     fn rejects_quantity_mismatch_before_upload() {
         let artifact = pack_and_sign(&envelope(), &SyntheticSigner).unwrap();
         let filename = filename();
-        let submitter = NativeSubmitter::new(
-            RecordingUploader::default(),
-            RecordingNotifier::default(),
-        );
+        let submitter =
+            NativeSubmitter::new(RecordingUploader::default(), RecordingNotifier::default());
         let request = PackArtifactSubmission {
             filename: &filename,
             artifact: &artifact,
