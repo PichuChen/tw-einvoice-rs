@@ -90,7 +90,10 @@ fn ec_pfx_produces_verifiable_turnkey_profile() {
     let pfx = pfx_der(&private_key, &certificate);
 
     let signer = PfxSigner::from_der(&pfx, PASSWORD).unwrap();
-    assert_eq!(signer.signature_algorithm(), SignatureAlgorithm::EcdsaSha256);
+    assert_eq!(
+        signer.signature_algorithm(),
+        SignatureAlgorithm::EcdsaSha256
+    );
 
     let signed = signer.sign_attached(CONTENT).unwrap();
     assert_eq!(&signed.as_encoded()[..2], &[0x30, 0x80]);
