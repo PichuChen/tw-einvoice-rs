@@ -11,5 +11,8 @@ rust-version.workspace = true
 tw-einvoice-envelope = { path = "../einvoice-envelope" }
 tw-einvoice-signing = { path = "../einvoice-signing" }
 
+[dev-dependencies]
+tw-einvoice-core = { path = "../einvoice-core" }
+
 [lints]
 workspace = true
