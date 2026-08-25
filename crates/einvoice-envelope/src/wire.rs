@@ -15,7 +15,7 @@ pub enum EnvelopeSerializeError {
     /// not UTF-8 cannot be inserted into the XML envelope without changing it.
     PayloadNotUtf8 { index: usize },
     /// An XML declaration cannot appear inside `InvoicePack`; the official
-    /// UpCast stage removes it before Pack splices payload text into the
+    /// `UpCast` stage removes it before Pack splices payload text into the
     /// envelope.
     EmbeddedXmlDeclaration { index: usize },
 }
