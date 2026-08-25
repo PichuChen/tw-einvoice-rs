@@ -56,7 +56,7 @@ impl SubmissionPlan {
 /// Durable-ready output of validation + Pack/signing, before any network I/O.
 ///
 /// This separation is intentional: a production daemon can persist the signed
-/// artifact and metadata before attempting SFTP/PFS001, then safely retry the
+/// artifact and metadata before attempting SFTP/`PFS001`, then safely retry the
 /// network phase without re-signing or regenerating identifiers.
 #[derive(Debug)]
 pub struct PreparedSubmission {
@@ -91,7 +91,7 @@ impl PreparedSubmission {
     ///
     /// # Errors
     ///
-    /// Returns [`PackArtifactSubmitError`] when the typed SendFile/SFTP/PFS001
+    /// Returns [`PackArtifactSubmitError`] when the typed `SendFile`/SFTP/`PFS001`
     /// pipeline rejects the prepared metadata, upload fails, notification fails,
     /// or the gateway returns a non-zero status.
     pub fn submit<U, N>(
@@ -458,7 +458,10 @@ mod tests {
 
         let receipt = prepared.submit(&submitter).unwrap();
 
-        assert_eq!(receipt.remote_filename, prepared.filename().remote_filename());
+        assert_eq!(
+            receipt.remote_filename,
+            prepared.filename().remote_filename()
+        );
         assert_eq!(submitter.uploader().calls.borrow().len(), 1);
         let notification = submitter.notifier().notification.borrow().clone().unwrap();
         assert_eq!(notification.filename, prepared.filename().remote_filename());
