@@ -2,7 +2,8 @@ use std::{error::Error, fmt};
 
 use crate::{
     gateway::{
-        GatewayNotifier, GatewayParty, GatewayProcessStatus, ServiceType, UploadNotification, ZipMode,
+        GatewayNotifier, GatewayParty, GatewayProcessStatus, ServiceType, UploadNotification,
+        ZipMode,
     },
     package::{PrepareUploadError, prepare_upload_object},
     sftp::ObjectUploader,
@@ -149,12 +150,13 @@ where
             turnkey_version: request.metadata.turnkey_version.clone(),
         };
 
-        let gateway_status = self.notifier.notify(&notification).map_err(|source| {
-            NativeSubmitError::Notify {
-                remote_filename: prepared.remote_filename.clone(),
-                source,
-            }
-        })?;
+        let gateway_status =
+            self.notifier
+                .notify(&notification)
+                .map_err(|source| NativeSubmitError::Notify {
+                    remote_filename: prepared.remote_filename.clone(),
+                    source,
+                })?;
 
         if !gateway_status.is_accepted() {
             return Err(NativeSubmitError::GatewayRejected {
@@ -198,7 +200,10 @@ where
             Self::Upload {
                 remote_filename,
                 source,
-            } => write!(f, "failed to upload SFTP object {remote_filename}: {source}"),
+            } => write!(
+                f,
+                "failed to upload SFTP object {remote_filename}: {source}"
+            ),
             Self::Notify {
                 remote_filename,
                 source,
@@ -321,27 +326,21 @@ mod tests {
         let receipt = submitter.submit(&request).unwrap();
         assert_eq!(receipt.remote_filename, "common");
 
-        let calls = submitter.uploader().calls.borrow();
-        assert_eq!(calls.len(), 1);
-        assert_eq!(calls[0].0, "common");
-        let mut archive = ZipArchive::new(std::io::Cursor::new(&calls[0].1)).unwrap();
-        let mut entry = archive.by_index(0).unwrap();
-        assert_eq!(entry.name(), request.signed_local_filename);
-        let mut unzipped = Vec::new();
-        entry.read_to_end(&mut unzipped).unwrap();
-        assert_eq!(unzipped, signed);
-        drop(entry);
-        drop(archive);
-        drop(calls);
+        {
+            let calls = submitter.uploader().calls.borrow();
+            assert_eq!(calls.len(), 1);
+            assert_eq!(calls[0].0, "common");
+            let mut archive = ZipArchive::new(std::io::Cursor::new(&calls[0].1)).unwrap();
+            let mut entry = archive.by_index(0).unwrap();
+            assert_eq!(entry.name(), request.signed_local_filename);
+            let mut unzipped = Vec::new();
+            entry.read_to_end(&mut unzipped).unwrap();
+            assert_eq!(unzipped, signed);
+        }
 
-        let notification = submitter
-            .notifier()
-            .notification
-            .borrow()
-            .clone()
-            .unwrap();
+        let notification = submitter.notifier().notification.borrow().clone().unwrap();
         assert_eq!(notification.filename, "common");
-        assert_eq!(notification.size, signed.len() as u64);
+        assert_eq!(notification.size, u64::try_from(signed.len()).unwrap());
         assert_eq!(notification.zip_mode, ZipMode::Zip);
     }
 
