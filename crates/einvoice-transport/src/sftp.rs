@@ -344,10 +344,7 @@ impl Ssh2RemoteInbox {
         let mut objects = Vec::with_capacity(entries.len());
 
         for (path, stat) in entries {
-            if stat
-                .perm
-                .is_some_and(|mode| mode & 0o170_000 == 0o040_000)
-            {
+            if stat.perm.is_some_and(|mode| mode & 0o170_000 == 0o040_000) {
                 continue;
             }
 
