@@ -9,6 +9,49 @@ use crate::{
     sftp::ObjectUploader,
 };
 
+/// MIG/task metadata carried into PFS001 independently from transport routing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeMessageProfile {
+    pub message_type: String,
+    pub action: String,
+    pub quantity: u32,
+    pub mig_version: String,
+}
+
+impl NativeMessageProfile {
+    #[must_use]
+    pub fn new(
+        message_type: impl Into<String>,
+        action: impl Into<String>,
+        quantity: u32,
+        mig_version: impl Into<String>,
+    ) -> Self {
+        Self {
+            message_type: message_type.into(),
+            action: action.into(),
+            quantity,
+            mig_version: mig_version.into(),
+        }
+    }
+}
+
+/// Software-version metadata reported by the current PFS001 contract.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GatewayVersionProfile {
+    pub api_version: String,
+    pub turnkey_version: String,
+}
+
+impl GatewayVersionProfile {
+    #[must_use]
+    pub fn new(api_version: impl Into<String>, turnkey_version: impl Into<String>) -> Self {
+        Self {
+            api_version: api_version.into(),
+            turnkey_version: turnkey_version.into(),
+        }
+    }
+}
+
 /// PFS metadata that is independent from the physical SFTP object. Filename,
 /// pre-ZIP size and ZIP flag are derived by the submission pipeline so callers
 /// cannot accidentally notify the platform with metadata inconsistent with the
@@ -18,13 +61,9 @@ pub struct NativeSubmissionMetadata {
     pub from: GatewayParty,
     pub to: GatewayParty,
     pub service_type: ServiceType,
-    pub message_type: String,
-    pub action: String,
-    pub quantity: u32,
-    pub mig_version: String,
+    pub message: NativeMessageProfile,
     pub retry: u32,
-    pub api_version: String,
-    pub turnkey_version: String,
+    pub versions: GatewayVersionProfile,
 }
 
 impl NativeSubmissionMetadata {
@@ -33,24 +72,16 @@ impl NativeSubmissionMetadata {
         from: GatewayParty,
         to: GatewayParty,
         service_type: ServiceType,
-        message_type: impl Into<String>,
-        action: impl Into<String>,
-        quantity: u32,
-        mig_version: impl Into<String>,
-        api_version: impl Into<String>,
-        turnkey_version: impl Into<String>,
+        message: NativeMessageProfile,
+        versions: GatewayVersionProfile,
     ) -> Self {
         Self {
             from,
             to,
             service_type,
-            message_type: message_type.into(),
-            action: action.into(),
-            quantity,
-            mig_version: mig_version.into(),
+            message,
             retry: UploadNotification::INITIAL_RETRY,
-            api_version: api_version.into(),
-            turnkey_version: turnkey_version.into(),
+            versions,
         }
     }
 }
@@ -81,6 +112,7 @@ pub struct NativeSubmissionReceipt {
 /// object. The remote filename is retained in the error so a durable worker can
 /// retry/reconcile without silently destroying the artifact needed by the
 /// platform.
+#[derive(Debug)]
 pub struct NativeSubmitter<U, N> {
     uploader: U,
     notifier: N,
@@ -139,15 +171,15 @@ where
             to: request.metadata.to.clone(),
             service_type: request.metadata.service_type,
             zip_mode: prepared.zip_mode,
-            message_type: request.metadata.message_type.clone(),
-            action: request.metadata.action.clone(),
-            quantity: request.metadata.quantity,
-            mig_version: request.metadata.mig_version.clone(),
+            message_type: request.metadata.message.message_type.clone(),
+            action: request.metadata.message.action.clone(),
+            quantity: request.metadata.message.quantity,
+            mig_version: request.metadata.message.mig_version.clone(),
             filename: prepared.remote_filename.clone(),
             size: prepared.notification_size,
             retry: request.metadata.retry,
-            api_version: request.metadata.api_version.clone(),
-            turnkey_version: request.metadata.turnkey_version.clone(),
+            api_version: request.metadata.versions.api_version.clone(),
+            turnkey_version: request.metadata.versions.turnkey_version.clone(),
         };
 
         let gateway_status =
@@ -297,12 +329,8 @@ mod tests {
             party("12345678", "FROM"),
             party("PLATFORM", "TO"),
             ServiceType::Store,
-            "F0401",
-            "C0401",
-            1,
-            "4.1",
-            "3.1.3",
-            "3.2.1",
+            NativeMessageProfile::new("F0401", "C0401", 1, "4.1"),
+            GatewayVersionProfile::new("3.1.3", "3.2.1"),
         )
     }
 
