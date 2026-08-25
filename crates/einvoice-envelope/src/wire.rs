@@ -61,7 +61,11 @@ impl InvoiceEnvelope {
     pub fn to_turnkey_xml(&self) -> Result<Vec<u8>, EnvelopeSerializeError> {
         let (namespace, version_token) = envelope_profile(self.metadata.version);
         let mut output = String::with_capacity(
-            self.payloads.iter().map(|payload| payload.as_bytes().len()).sum::<usize>() + 1024,
+            self.payloads
+                .iter()
+                .map(|payload| payload.as_bytes().len())
+                .sum::<usize>()
+                + 1024,
         );
 
         // The official no-start-document JAXB/StAX path emits this leading LF,
@@ -257,7 +261,8 @@ mod tests {
 
     #[test]
     fn normalizes_payload_crlf_like_linux_pack() {
-        let payload = MigPayload::new(b"<Invoice>\r\n  <Main/>\r\n</Invoice>\r\n".to_vec()).unwrap();
+        let payload =
+            MigPayload::new(b"<Invoice>\r\n  <Main/>\r\n</Invoice>\r\n".to_vec()).unwrap();
         let envelope = InvoiceEnvelope::new(routing(), metadata(), vec![payload]).unwrap();
         let encoded = String::from_utf8(envelope.to_turnkey_xml().unwrap()).unwrap();
 
