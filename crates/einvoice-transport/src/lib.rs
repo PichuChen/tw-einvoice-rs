@@ -2,6 +2,7 @@
 
 pub mod filename;
 pub mod gateway;
+pub mod inbound;
 pub mod native;
 pub mod package;
 pub mod receiver;
