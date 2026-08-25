@@ -1,10 +1,6 @@
 use std::{error::Error, fmt, io::Write};
 
-use zip::{
-    CompressionMethod, ZipWriter,
-    result::ZipError,
-    write::SimpleFileOptions,
-};
+use zip::{CompressionMethod, ZipWriter, result::ZipError, write::SimpleFileOptions};
 
 use crate::gateway::ZipMode;
 
@@ -169,7 +165,10 @@ mod tests {
         .unwrap();
 
         assert_eq!(prepared.uploaded_bytes, source);
-        assert_eq!(prepared.notification_size, source.len() as u64);
+        assert_eq!(
+            prepared.notification_size,
+            u64::try_from(source.len()).unwrap()
+        );
         assert_eq!(prepared.remote_filename, "4.1-F0401-common");
     }
 
@@ -181,7 +180,10 @@ mod tests {
         let prepared = prepare_upload_object(local, remote, source, ZipMode::Zip).unwrap();
 
         assert_eq!(prepared.remote_filename, remote);
-        assert_eq!(prepared.notification_size, source.len() as u64);
+        assert_eq!(
+            prepared.notification_size,
+            u64::try_from(source.len()).unwrap()
+        );
         assert_ne!(prepared.uploaded_bytes, source);
 
         let cursor = std::io::Cursor::new(&prepared.uploaded_bytes);
