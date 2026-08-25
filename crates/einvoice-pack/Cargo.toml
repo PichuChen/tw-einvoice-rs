@@ -1,0 +1,15 @@
+[package]
+name = "tw-einvoice-pack"
+description = "Turnkey-compatible envelope packing and signing pipeline for Taiwan e-Invoice"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tw-einvoice-envelope = { path = "../einvoice-envelope" }
+tw-einvoice-signing = { path = "../einvoice-signing" }
+
+[lints]
+workspace = true
