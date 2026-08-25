@@ -1,0 +1,20 @@
+[package]
+name = "tw-einvoice-client"
+description = "Validated end-to-end submission facade for Taiwan e-Invoice Turnkey interoperability"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+tw-einvoice-envelope = { path = "../einvoice-envelope" }
+tw-einvoice-pack = { path = "../einvoice-pack" }
+tw-einvoice-signing = { path = "../einvoice-signing" }
+tw-einvoice-transport = { path = "../einvoice-transport" }
+
+[dev-dependencies]
+tw-einvoice-core = { path = "../einvoice-core" }
+
+[lints]
+workspace = true

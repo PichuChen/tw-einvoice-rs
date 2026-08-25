@@ -8,6 +8,7 @@ members = [
     "crates/einvoice-pack",
     "crates/einvoice-results",
     "crates/einvoice-transport",
+    "crates/einvoice-client",
     "apps/einvoice-cli",
 ]
 
