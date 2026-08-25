@@ -281,7 +281,10 @@ pub trait GatewayNotifier {
     ///
     /// Returns the concrete notifier error when encoding, HTTP transport, HTTP
     /// status handling, or response decoding fails.
-    fn notify(&self, notification: &UploadNotification) -> Result<GatewayProcessStatus, Self::Error>;
+    fn notify(
+        &self,
+        notification: &UploadNotification,
+    ) -> Result<GatewayProcessStatus, Self::Error>;
 }
 
 /// Blocking PFS001 client suitable for a dedicated Turnkey-compatible worker.
@@ -359,7 +362,10 @@ impl fmt::Debug for Pfs001HttpClient {
 impl GatewayNotifier for Pfs001HttpClient {
     type Error = Pfs001HttpError;
 
-    fn notify(&self, notification: &UploadNotification) -> Result<GatewayProcessStatus, Self::Error> {
+    fn notify(
+        &self,
+        notification: &UploadNotification,
+    ) -> Result<GatewayProcessStatus, Self::Error> {
         let body = notification
             .to_pfs001_json(&self.credentials)
             .map_err(Pfs001HttpError::Encode)?;
