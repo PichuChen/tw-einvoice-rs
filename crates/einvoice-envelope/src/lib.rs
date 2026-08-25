@@ -1,8 +1,12 @@
 #![forbid(unsafe_code)]
 
+mod wire;
+
 use std::{error::Error, fmt};
 
 use tw_einvoice_core::MigVersion;
+
+pub use wire::EnvelopeSerializeError;
 
 /// Party information carried by the Turnkey invoice envelope.
 ///
@@ -39,7 +43,8 @@ pub struct InvoicePackMetadata {
 }
 
 /// Opaque serialized MIG payload. Message-specific parsing belongs to
-/// `tw-einvoice-mig`; the envelope layer only owns batching and routing.
+/// `tw-einvoice-mig`; the envelope layer owns batching/routing while preserving
+/// the already-canonical payload bytes produced by the upstream MIG stage.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MigPayload(Vec<u8>);
 
