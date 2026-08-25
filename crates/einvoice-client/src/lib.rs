@@ -128,8 +128,12 @@ pub fn prepare_submission<S: CmsSigner>(
 ) -> Result<PreparedSubmission, PrepareSubmissionError<S::Error>> {
     validate_plan(&plan).map_err(PrepareSubmissionError::Consistency)?;
 
-    let quantity = u32::try_from(plan.envelope.count())
-        .expect("InvoiceEnvelope enforces at most 1000 payloads");
+    let envelope_count = plan.envelope.count();
+    let quantity = u32::try_from(envelope_count).map_err(|_| {
+        PrepareSubmissionError::Consistency(SubmissionConsistencyError::EnvelopeCountOutOfRange {
+            count: envelope_count,
+        })
+    })?;
     let artifact = pack_and_sign(&plan.envelope, signer).map_err(PrepareSubmissionError::Pack)?;
 
     let from = gateway_party(&plan.envelope.routing.from, &plan.envelope.routing.from_vac);
@@ -220,6 +224,9 @@ pub enum SubmissionConsistencyError {
     InvalidFilenameCount {
         count: i32,
     },
+    EnvelopeCountOutOfRange {
+        count: usize,
+    },
     CountMismatch {
         envelope_count: usize,
         filename_count: usize,
@@ -247,6 +254,9 @@ impl fmt::Display for SubmissionConsistencyError {
         match self {
             Self::InvalidFilenameCount { count } => {
                 write!(f, "Turnkey filename contains invalid pack count {count}")
+            }
+            Self::EnvelopeCountOutOfRange { count } => {
+                write!(f, "envelope message count {count} cannot be represented in PFS001")
             }
             Self::CountMismatch {
                 envelope_count,
