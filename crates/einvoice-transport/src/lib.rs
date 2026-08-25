@@ -8,6 +8,7 @@ pub mod package;
 pub mod receiver;
 pub mod reconciliation;
 pub mod sftp;
+mod sftp_reconciliation;
 
 use tw_einvoice_core::SubmissionState;
 
