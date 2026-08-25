@@ -13,5 +13,8 @@ tw-einvoice-pack = { path = "../einvoice-pack" }
 tw-einvoice-signing = { path = "../einvoice-signing" }
 tw-einvoice-transport = { path = "../einvoice-transport" }
 
+[dev-dependencies]
+tw-einvoice-core = { path = "../einvoice-core" }
+
 [lints]
 workspace = true
