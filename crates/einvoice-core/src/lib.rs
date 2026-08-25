@@ -8,6 +8,16 @@ pub enum MigVersion {
     V4_1,
 }
 
+impl MigVersion {
+    /// MIG version token used in message/common-name metadata.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::V4_1 => "4.1",
+        }
+    }
+}
+
 /// MIG `BAN` data element.
 ///
 /// MIG 4.1 defines this as 8 to 10 ASCII digits. For B2C messages the buyer
@@ -120,6 +130,11 @@ pub enum SubmissionState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn exposes_mig_wire_version() {
+        assert_eq!(MigVersion::V4_1.as_str(), "4.1");
+    }
 
     #[test]
     fn accepts_mig_ban_lengths() {
