@@ -1,6 +1,11 @@
 #![forbid(unsafe_code)]
 
+mod ber;
+pub mod pfx;
+
 use base64::{Engine as _, engine::general_purpose::STANDARD};
+
+pub use pfx::{PfxSigner, PfxSignerError};
 
 /// Digest algorithm observed in Turnkey 3.2.1 CMS signatures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -26,7 +31,7 @@ pub enum SignatureAlgorithm {
 }
 
 impl SignatureAlgorithm {
-    /// ASN.1 signature algorithm object identifier.
+    /// ASN.1 signature algorithm object identifier emitted by Turnkey 3.2.1.
     #[must_use]
     pub const fn oid(self) -> &'static str {
         match self {
@@ -46,7 +51,8 @@ pub enum CmsContentMode {
 /// ASN.1 encoding profile emitted by the official Turnkey KMS generator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CmsEncoding {
-    /// Streaming BER with indefinite-length containers.
+    /// BER with indefinite-length outer containers and definite-length primitive
+    /// values, including the encapsulated invoice-envelope OCTET STRING.
     BerIndefiniteLength,
 }
 
@@ -75,8 +81,8 @@ impl Default for TurnkeyCmsProfile {
 
 /// Encoded CMS `SignedData` before Turnkey transport armor is applied.
 ///
-/// Compatibility mode expects the BER streaming representation emitted by the
-/// official KMS implementation rather than assuming canonical DER.
+/// Strict compatibility mode expects the BER streaming representation emitted
+/// by the official KMS implementation rather than canonical DER.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CmsSignedData(Vec<u8>);
 
@@ -95,6 +101,11 @@ impl CmsSignedData {
         }
     }
 
+    pub(crate) fn from_encoded_unchecked(bytes: Vec<u8>) -> Self {
+        debug_assert!(!bytes.is_empty());
+        Self(bytes)
+    }
+
     #[must_use]
     pub fn as_encoded(&self) -> &[u8] {
         &self.0
@@ -109,7 +120,7 @@ impl CmsSignedData {
     /// deterministic and matches the recovered Linux interoperability profile.
     #[must_use]
     pub fn to_turnkey_armored(&self) -> String {
-        const LINE_MASK: usize = 63; // 64-character lines.
+        const LINE_MASK: usize = 63;
 
         let encoded = STANDARD.encode(&self.0);
         let line_count = encoded.len().div_ceil(64);
@@ -161,7 +172,7 @@ pub trait CmsSigner {
     /// # Errors
     ///
     /// Returns the backend-specific signing error when key loading, certificate
-    /// parsing, or CMS generation fails.
+    /// parsing, private-key signing, or CMS generation fails.
     fn sign_attached(&self, content: &[u8]) -> Result<CmsSignedData, Self::Error>;
 }
 

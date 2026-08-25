@@ -9,6 +9,7 @@ rust-version.workspace = true
 
 [dependencies]
 base64 = "0.22"
+openssl = "0.10.81"
 
 [lints]
 workspace = true
