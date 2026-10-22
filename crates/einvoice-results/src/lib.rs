@@ -149,13 +149,13 @@ impl SummaryMessage {
             });
         }
 
-        if let Some(expected) = expected_quantity {
-            if i64::from(self.result.total.count) != i64::from(expected) {
-                issues.push(SummaryValidationIssue::ExpectedQuantityMismatch {
-                    expected,
-                    actual: self.result.total.count,
-                });
-            }
+        if let Some(expected) = expected_quantity
+            && i64::from(self.result.total.count) != i64::from(expected)
+        {
+            issues.push(SummaryValidationIssue::ExpectedQuantityMismatch {
+                expected,
+                actual: self.result.total.count,
+            });
         }
 
         issues
