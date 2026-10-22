@@ -19,8 +19,10 @@ use tw_einvoice_signing::PfxSigner;
 use tw_einvoice_transport::{
     filename::TurnkeyPackFilename,
     gateway::{GatewayCredentials, Pfs001HttpClient, ServiceType, ZipMode},
+    inbound::ParsedReconciliation,
     native::{GatewayVersionProfile, NativeSubmitter},
-    sftp::{SftpConfig, SftpCredentials, Ssh2SftpUploader},
+    reconciliation::{ReconciledObject, ReconciliationPoller},
+    sftp::{SftpConfig, SftpCredentials, Ssh2RemoteInbox, Ssh2SftpUploader},
 };
 
 const DEFAULT_PFX_PASSWORD_ENV: &str = "TW_EINVOICE_PFX_PASSWORD";
@@ -31,7 +33,7 @@ const DEFAULT_TURNKEY_VERSION: &str = "3.2.1";
 #[derive(Debug, Parser)]
 #[command(
     name = "tw-einvoice",
-    about = "Turnkey-compatible Taiwan e-Invoice prepare/submit tooling",
+    about = "Turnkey-compatible Taiwan e-Invoice prepare/submit/receive tooling",
     version
 )]
 struct Cli {
@@ -45,6 +47,8 @@ enum Command {
     Prepare(PrepareArgs),
     /// Prepare and persist an artifact, then submit it through SFTP + PFS001.
     Submit(SubmitArgs),
+    /// Durably receive and classify objects from the SFTP /out inbox.
+    Receive(ReceiveArgs),
 }
 
 #[derive(Debug, Args)]
@@ -73,6 +77,29 @@ struct SubmitArgs {
     /// Environment variable containing the transport password.
     #[arg(long, default_value = DEFAULT_TRANSPORT_PASSWORD_ENV)]
     transport_password_env: String,
+}
+
+#[derive(Debug, Args)]
+struct ReceiveArgs {
+    /// Explicit platform environment. There is intentionally no implicit default.
+    #[arg(long, value_enum)]
+    environment: PlatformEnvironment,
+
+    /// OpenSSH `known_hosts` file used for mandatory SFTP host-key verification.
+    #[arg(long)]
+    known_hosts: PathBuf,
+
+    /// Ministry transport account/login ID used for SFTP.
+    #[arg(long)]
+    transport_id: String,
+
+    /// Environment variable containing the transport password.
+    #[arg(long, default_value = DEFAULT_TRANSPORT_PASSWORD_ENV)]
+    transport_password_env: String,
+
+    /// Durable local directory for objects received from SFTP `/out`.
+    #[arg(long)]
+    inbox_dir: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -215,6 +242,7 @@ enum CliError {
     MissingSecretEnvironment { name: String },
     NonUnicodeSecretEnvironment { name: String },
     EmptySecretEnvironmentName,
+    InboundObjectFailures { count: usize },
 }
 
 impl std::fmt::Display for CliError {
@@ -232,6 +260,9 @@ impl std::fmt::Display for CliError {
             ),
             Self::EmptySecretEnvironmentName => {
                 f.write_str("secret environment variable name must not be empty")
+            }
+            Self::InboundObjectFailures { count } => {
+                write!(f, "{count} inbound object(s) failed durable receive or parsing")
             }
         }
     }
@@ -254,6 +285,7 @@ fn run() -> Result<(), Box<dyn Error>> {
     match cli.command {
         Command::Prepare(args) => run_prepare(&args),
         Command::Submit(args) => run_submit(&args),
+        Command::Receive(args) => run_receive(&args),
     }
 }
 
@@ -305,6 +337,82 @@ fn run_submit(args: &SubmitArgs) -> Result<(), Box<dyn Error>> {
         receipt.remote_filename, receipt.gateway_status.status_code
     );
     Ok(())
+}
+
+fn run_receive(args: &ReceiveArgs) -> Result<(), Box<dyn Error>> {
+    let transport_password = read_secret_environment(&args.transport_password_env)?;
+    let endpoints = args.environment.endpoints();
+    let remote = Ssh2RemoteInbox::new(
+        SftpConfig::new(endpoints.sftp_host, &args.known_hosts),
+        SftpCredentials::new(&args.transport_id, transport_password),
+    );
+    let mut poller = ReconciliationPoller::new(remote, &args.inbox_dir)?;
+    let attempts = poller.poll_once()?;
+
+    if attempts.is_empty() {
+        println!(
+            "received environment={} objects=0 inbox={}",
+            args.environment.label(),
+            args.inbox_dir.display()
+        );
+        return Ok(());
+    }
+
+    let mut failures = 0_usize;
+    for attempt in attempts {
+        let remote_name = attempt.object.name;
+        match attempt.result {
+            Ok(reconciled) => print_reconciled_object(&reconciled),
+            Err(error) => {
+                failures += 1;
+                eprintln!("receive_error object={remote_name} error={error}");
+            }
+        }
+    }
+
+    if failures == 0 {
+        Ok(())
+    } else {
+        Err(Box::new(CliError::InboundObjectFailures { count: failures }))
+    }
+}
+
+fn print_reconciled_object(reconciled: &ReconciledObject) {
+    let path = reconciled.record.path().display();
+    match &reconciled.record.reconciliation {
+        Some(ParsedReconciliation::Process(result)) => {
+            let codes = result
+                .diagnostics
+                .iter()
+                .map(|diagnostic| diagnostic.code.as_str())
+                .collect::<Vec<_>>()
+                .join(",");
+            println!(
+                "received kind=ProcessResult path={path} correlation_id={} diagnostics={} codes={codes}",
+                result.message.id,
+                result.diagnostics.len()
+            );
+        }
+        Some(ParsedReconciliation::Summary(result)) => {
+            for message in &result.messages {
+                let issues = message.validation_issues(None);
+                println!(
+                    "received kind=SummaryResult path={path} correlation_id={} total={} good={} failed={} validation_issues={}",
+                    message.info.id,
+                    message.result.total.count,
+                    message.result.good.count,
+                    message.result.failed.count,
+                    issues.len()
+                );
+            }
+        }
+        None => {
+            println!(
+                "received kind={:?} path={path} correlation_ids=0",
+                reconciled.record.kind
+            );
+        }
+    }
 }
 
 fn prepare(args: &CommonPrepareArgs) -> Result<PreparedSubmission, Box<dyn Error>> {
@@ -458,6 +566,22 @@ mod tests {
             "known_hosts",
             "--transport-id",
             "transport-id",
+        ]);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn receive_requires_explicit_environment() {
+        let result = Cli::try_parse_from([
+            "tw-einvoice",
+            "receive",
+            "--known-hosts",
+            "known_hosts",
+            "--transport-id",
+            "transport-id",
+            "--inbox-dir",
+            "inbox",
         ]);
 
         assert!(result.is_err());
