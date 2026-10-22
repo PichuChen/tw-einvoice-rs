@@ -58,7 +58,9 @@ implementation deliberately does not reproduce the official client's observed
 
 A non-root multi-stage Linux image is included. See
 [`docs/container.md`](docs/container.md) for build, mounts, secret handling,
-test/production selection, and durable inbox guidance.
+test/production selection, and durable inbox guidance. Supply-chain controls,
+locked builds, RustSec scanning, and SBOM artifacts are documented in
+[`docs/supply-chain.md`](docs/supply-chain.md).
 
 ```sh
 docker build -t tw-einvoice-rs:local .
