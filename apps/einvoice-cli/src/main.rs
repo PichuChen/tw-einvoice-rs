@@ -62,7 +62,7 @@ struct SubmitArgs {
     #[arg(long, value_enum)]
     environment: PlatformEnvironment,
 
-    /// OpenSSH known_hosts file used for mandatory SFTP host-key verification.
+    /// OpenSSH `known_hosts` file used for mandatory SFTP host-key verification.
     #[arg(long)]
     known_hosts: PathBuf,
 
@@ -81,31 +81,31 @@ struct CommonPrepareArgs {
     #[arg(long)]
     filename: String,
 
-    /// Canonical MIG XML payload(s), in the exact order to embed in InvoicePack.
+    /// Canonical MIG XML payload(s), in the exact order to embed in `InvoicePack`.
     #[arg(long, required = true, num_args = 1..)]
     mig: Vec<PathBuf>,
 
-    /// FromVAC RoutingId.
+    /// `FromVAC` `RoutingId`.
     #[arg(long)]
     from_vac: String,
 
-    /// ToVAC RoutingId.
+    /// `ToVAC` `RoutingId`.
     #[arg(long)]
     to_vac: String,
 
-    /// Optional From PartyInfo description.
+    /// Optional From `PartyInfo` description.
     #[arg(long)]
     from_description: Option<String>,
 
-    /// Optional To PartyInfo description.
+    /// Optional To `PartyInfo` description.
     #[arg(long)]
     to_description: Option<String>,
 
-    /// Optional FromVAC description.
+    /// Optional `FromVAC` description.
     #[arg(long)]
     from_vac_description: Option<String>,
 
-    /// Optional ToVAC description.
+    /// Optional `ToVAC` description.
     #[arg(long)]
     to_vac_description: Option<String>,
 
