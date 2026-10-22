@@ -3,7 +3,6 @@
 use std::{
     env,
     error::Error,
-    ffi::OsString,
     fs::{self, OpenOptions},
     io::{self, Write},
     path::{Path, PathBuf},
@@ -533,10 +532,5 @@ mod tests {
         );
         let error = read_secret_environment(&missing).unwrap_err();
         assert!(error.to_string().contains(&missing));
-    }
-
-    #[test]
-    fn os_string_import_is_not_needed_for_secret_handling() {
-        let _ = OsString::from("environment-variable-name");
     }
 }
