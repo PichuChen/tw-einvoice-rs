@@ -221,7 +221,7 @@ impl std::fmt::Display for CliError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::MissingSecretEnvironment { name } => {
-                write!(f, "required secret environment variable {name:?} is not set")
+                write!(\n                    f,\n                    "required secret environment variable {name:?} is not set"\n                )
             }
             Self::NonUnicodeSecretEnvironment { name } => write!(
                 f,
