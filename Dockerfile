@@ -10,11 +10,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY Cargo.toml rust-toolchain.toml ./
+COPY Cargo.toml Cargo.lock rust-toolchain.toml ./
 COPY apps ./apps
 COPY crates ./crates
 
-RUN cargo +1.88.0 build --release -p tw-einvoice-cli
+RUN cargo +1.88.0 build --locked --release -p tw-einvoice-cli
 
 FROM debian:bookworm-slim AS runtime
 
