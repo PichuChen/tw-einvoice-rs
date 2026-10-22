@@ -371,7 +371,7 @@ mod tests {
 
         assert_eq!(record.kind, InboundObjectKind::ExchangeAck);
         assert!(record.reconciliation.is_none());
-        assert!(record.correlation_ids().is_empty());
+        assert_eq!(record.correlation_ids(), Vec::<&str>::new());
     }
 
     #[test]

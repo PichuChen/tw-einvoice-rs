@@ -102,7 +102,6 @@ impl CmsSignedData {
     }
 
     pub(crate) fn from_encoded_unchecked(bytes: Vec<u8>) -> Self {
-        debug_assert!(!bytes.is_empty());
         Self(bytes)
     }
 
