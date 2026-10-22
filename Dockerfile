@@ -1,4 +1,4 @@
-FROM rust:1.85-bookworm AS builder
+FROM rust:1.85.0-bookworm AS builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -14,7 +14,7 @@ COPY Cargo.toml rust-toolchain.toml ./
 COPY apps ./apps
 COPY crates ./crates
 
-RUN cargo build --release -p tw-einvoice-cli
+RUN cargo +1.85.0 build --release -p tw-einvoice-cli
 
 FROM debian:bookworm-slim AS runtime
 
