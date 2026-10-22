@@ -262,7 +262,10 @@ impl std::fmt::Display for CliError {
                 f.write_str("secret environment variable name must not be empty")
             }
             Self::InboundObjectFailures { count } => {
-                write!(f, "{count} inbound object(s) failed durable receive or parsing")
+                write!(
+                    f,
+                    "{count} inbound object(s) failed durable receive or parsing"
+                )
             }
         }
     }
@@ -373,7 +376,9 @@ fn run_receive(args: &ReceiveArgs) -> Result<(), Box<dyn Error>> {
     if failures == 0 {
         Ok(())
     } else {
-        Err(Box::new(CliError::InboundObjectFailures { count: failures }))
+        Err(Box::new(CliError::InboundObjectFailures {
+            count: failures,
+        }))
     }
 }
 
