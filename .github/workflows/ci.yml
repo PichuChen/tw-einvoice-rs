@@ -34,3 +34,19 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build --tag tw-einvoice-rs:ci .
       - run: docker run --rm tw-einvoice-rs:ci --help
+
+
+  lockfile-export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.88.0"
+      - run: cargo +1.88.0 generate-lockfile
+      - name: Emit generated lockfile for bootstrap
+        run: |
+          echo LOCKFILE_BASE64_BEGIN
+          base64 -w0 Cargo.lock
+          echo
+          echo LOCKFILE_BASE64_END
