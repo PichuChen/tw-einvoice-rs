@@ -1,44 +1,81 @@
 # tw-einvoice-rs
 
-Open-source Rust building blocks for Taiwan e-Invoice interoperability.
+Open-source Rust implementation of Taiwan e-Invoice MIG, signing, transport,
+and Turnkey-compatible workflows.
 
 ## Scope
 
-This project aims to implement, from public specifications and independently observed interoperability behavior:
+This project implements, from public specifications and independently observed
+interoperability behavior:
 
-- MIG 4.1 data models and validation
-- invoice lifecycle primitives
+- MIG 4.1 domain/validation primitives
 - invoice-envelope batching and routing
-- CMS signing abstractions
-- Ministry of Finance gateway/SFTP transport abstractions
-- compatibility adapters for existing Turnkey-based deployments
+- strict Turnkey-compatible CMS/SignedData signing
+- Turnkey filename and packaging behavior
+- Ministry SFTP `/in` upload and `/out` durable receive
+- PFS001 upload notification
+- ProcessResult/SummaryResult reconciliation
+- validated end-to-end submission orchestration
+- operator CLI and Linux container packaging
 
-The project does **not** redistribute proprietary Turnkey binaries or decompiled source code. Public implementation work should be reproducible from public specifications, public documentation, and normalized interoperability test vectors.
+The project does **not** redistribute proprietary Turnkey binaries or decompiled
+source code. Public implementation work should remain reproducible from public
+specifications, public documentation, normalized interoperability observations,
+and synthetic test vectors.
 
-## Current compatibility model
-
-The workspace currently contains:
+## Workspace
 
 - `tw-einvoice-core`: common MIG/domain primitives and submission state
 - `tw-einvoice-mig`: MIG document metadata and validation boundary
-- `tw-einvoice-envelope`: routing and 1..1000 message batching model
-- `tw-einvoice-signing`: attached CMS/SignedData profile and Turnkey-compatible Base64 armor
-- `tw-einvoice-transport`: Turnkey filename grammar and PFS001 gateway request/response model
-- `einvoice-cli`: future operator/developer CLI
+- `tw-einvoice-envelope`: Turnkey-compatible envelope serialization/batching
+- `tw-einvoice-signing`: strict attached CMS signer and PFX backend
+- `tw-einvoice-pack`: envelope -> CMS -> armored signed artifact
+- `tw-einvoice-results`: ProcessResult/SummaryResult parsing and validation
+- `tw-einvoice-transport`: filename, ZIP, SFTP, PFS001 and reconciliation
+- `tw-einvoice-client`: cross-layer validated prepare/submit facade
+- `tw-einvoice-cli`: `prepare`, `submit`, and `receive` operator commands
 
-Recovered transport details are treated as compatibility behavior, not as an API design to copy blindly. In particular, quirks such as extensionless ZIP uploads and pre-compression `size` reporting will be isolated behind explicit compatibility policies as the native transport is implemented.
+## Implemented path
+
+```text
+canonical MIG 4.1
+    -> InvoiceEnvelope
+    -> strict CMS/PFX signer
+    -> Base64 signed artifact
+    -> optional Turnkey-compatible ZIP
+    -> verified SFTP /in
+    -> PFS001
+    -> verified SFTP /out
+    -> durable local receive
+    -> ProcessResult / SummaryResult
+```
+
+SFTP host keys are verified through OpenSSH `known_hosts`; the native
+implementation deliberately does not reproduce the official client's observed
+`StrictHostKeyChecking=no` behavior.
+
+## Container
+
+A non-root multi-stage Linux image is included. See
+[`docs/container.md`](docs/container.md) for build, mounts, secret handling,
+test/production selection, and durable inbox guidance.
+
+```sh
+docker build -t tw-einvoice-rs:local .
+docker run --rm tw-einvoice-rs:local --help
+```
 
 ## Status
 
-Early research / bootstrap stage. **Do not use for production invoice transmission yet.**
+**Pre-production. Do not use for production invoice transmission yet.**
 
-The first target is a synthetic end-to-end path:
+Synthetic and local interoperability tests cover the native pipeline, but live
+Ministry **test-environment** interoperability still needs to be completed with
+authorized test credentials, an approved source IP, a test PFX identity, and
+the Ministry SFTP host key before production enablement.
 
-```text
-MIG 4.1 -> InvoiceEnvelope -> CMS signer -> SFTP /in -> PFS001 -> /out reconciliation
-```
-
-No production credentials, certificates, or taxpayer data belong in this repository.
+No production credentials, certificates, taxpayer data, or proprietary Turnkey
+artifacts belong in this repository.
 
 ## License
 
