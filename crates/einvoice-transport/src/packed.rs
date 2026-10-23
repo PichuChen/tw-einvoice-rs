@@ -290,7 +290,7 @@ mod tests {
 
         let mut archive = ZipArchive::new(std::io::Cursor::new(&calls[0].1)).unwrap();
         let mut entry = archive.by_index(0).unwrap();
-        assert_eq!(entry.name(), filename.render());
+        assert_eq!(entry.name().unwrap().as_ref(), filename.render());
         let mut unzipped = Vec::new();
         entry.read_to_end(&mut unzipped).unwrap();
         assert_eq!(unzipped, artifact.as_upload_bytes());

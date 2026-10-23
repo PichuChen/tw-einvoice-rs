@@ -188,7 +188,7 @@ mod tests {
         let mut archive = ZipArchive::new(cursor).unwrap();
         assert_eq!(archive.len(), 1);
         let mut entry = archive.by_index(0).unwrap();
-        assert_eq!(entry.name(), local);
+        assert_eq!(entry.name().unwrap().as_ref(), local);
         let mut decoded = Vec::new();
         entry.read_to_end(&mut decoded).unwrap();
         assert_eq!(decoded, source);
