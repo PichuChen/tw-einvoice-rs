@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - name: TEMP regenerate lockfile for zip 9
+      - name: TEMP regenerate lockfile for zip 9 (bootstrap)
         run: |
           cargo update -p zip --precise 9.0.0
           echo "LOCKFILE_BEGIN"
