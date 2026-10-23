@@ -46,6 +46,12 @@ jobs:
           base64 -w0 Cargo.lock
           echo
           echo "LOCKFILE_END"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: refreshed-cargo-lock
+          path: Cargo.lock
+          if-no-files-found: error
+          retention-days: 1
       - name: Install RustSec cargo-audit
         run: cargo install cargo-audit --version 0.22.2 --locked
       - name: Audit locked Rust dependencies
