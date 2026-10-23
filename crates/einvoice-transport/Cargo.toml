@@ -15,7 +15,7 @@ ssh2 = "0.9.6"
 tw-einvoice-core = { path = "../einvoice-core" }
 tw-einvoice-pack = { path = "../einvoice-pack" }
 tw-einvoice-results = { path = "../einvoice-results" }
-zip = { version = "5.1.1", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.0", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
 tw-einvoice-envelope = { path = "../einvoice-envelope" }
