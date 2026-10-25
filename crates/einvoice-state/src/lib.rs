@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use std::{error::Error, fmt};
+use std::{cmp::Ordering, error::Error, fmt};
 
 use tw_einvoice_results::{
     InvoiceReference, ProcessResult, SummaryMessage, SummaryResult, SummaryValidationIssue,
@@ -10,7 +10,7 @@ use tw_einvoice_results::{
 ///
 /// This deliberately excludes business acceptance/rejection. A message may be
 /// fully transported and acknowledged while still containing failed invoices;
-/// terminal business disposition is represented separately by TerminalSummary.
+/// terminal business disposition is represented separately by `TerminalSummary`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum TransportState {
     Created,
@@ -101,7 +101,7 @@ impl SubmissionRecord {
     ///
     /// # Errors
     ///
-    /// Returns an error when message_id is empty or expected_quantity is zero.
+    /// Returns an error when `message_id` is empty or `expected_quantity` is zero.
     pub fn new(
         message_id: impl Into<String>,
         expected_quantity: u32,
@@ -150,23 +150,23 @@ impl SubmissionRecord {
 
     #[must_use]
     pub fn advance_transport(&mut self, target: TransportState) -> TransportAdvance {
-        if target > self.transport {
-            let from = self.transport;
-            self.transport = target;
-            TransportAdvance::Advanced { from, to: target }
-        } else if target == self.transport {
-            TransportAdvance::Unchanged
-        } else {
-            TransportAdvance::IgnoredStale {
+        match target.cmp(&self.transport) {
+            Ordering::Greater => {
+                let from = self.transport;
+                self.transport = target;
+                TransportAdvance::Advanced { from, to: target }
+            }
+            Ordering::Equal => TransportAdvance::Unchanged,
+            Ordering::Less => TransportAdvance::IgnoredStale {
                 current: self.transport,
                 attempted: target,
-            }
+            },
         }
     }
 
-    /// Applies one ProcessResult as protocol acknowledgement/diagnostics.
+    /// Applies one `ProcessResult` as protocol acknowledgement/diagnostics.
     ///
-    /// A ProcessResult never creates a terminal business disposition.
+    /// A `ProcessResult` never creates a terminal business disposition.
     ///
     /// # Errors
     ///
@@ -186,7 +186,7 @@ impl SubmissionRecord {
         Ok(ApplyOutcome::Changed)
     }
 
-    /// Selects and applies this submission's entry from a multi-message SummaryResult.
+    /// Selects and applies this submission's entry from a multi-message `SummaryResult`.
     ///
     /// # Errors
     ///
@@ -221,7 +221,7 @@ impl SubmissionRecord {
         self.apply_summary_message(message.clone())
     }
 
-    /// Applies one terminal SummaryMessage after count validation.
+    /// Applies one terminal `SummaryMessage` after count validation.
     ///
     /// # Errors
     ///
@@ -248,8 +248,8 @@ impl SubmissionRecord {
             }
             return Err(ApplyError::ConflictingTerminalSummary {
                 message_id: self.message_id.clone(),
-                existing: existing.clone(),
-                incoming,
+                existing: Box::new(existing.clone()),
+                incoming: Box::new(incoming),
             });
         }
 
@@ -308,8 +308,8 @@ pub enum ApplyError {
     },
     ConflictingTerminalSummary {
         message_id: String,
-        existing: TerminalSummary,
-        incoming: TerminalSummary,
+        existing: Box<TerminalSummary>,
+        incoming: Box<TerminalSummary>,
     },
 }
 
@@ -357,7 +357,7 @@ pub enum StoreWriteOutcome {
 
 /// Persistence boundary for a future PostgreSQL implementation.
 ///
-/// expected_revision = None means create-only. Implementations should atomically
+/// `expected_revision = None` means create-only. Implementations should atomically
 /// increment the revision on successful updates.
 pub trait SubmissionStore {
     type Error;
