@@ -5,8 +5,9 @@ use tw_einvoice_core::Ban;
 use crate::{
     ValidationIssue, ValidationReport,
     primitives::{
-        BondedArea, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber, InvoiceType,
-        MigDate, MigDecimal, MigTime, PrintMark, TaxRate, TaxType, ZeroTaxRateReason,
+        BondedArea, BuyerRemark, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber,
+        InvoiceType, MigDate, MigDecimal, MigTime, PrintMark, TaxRate, TaxType,
+        ZeroTaxRateReason,
     },
 };
 
@@ -49,7 +50,7 @@ pub struct F0401Main {
     pub invoice_time: MigTime,
     pub seller: RoleDescription,
     pub buyer: RoleDescription,
-    pub buyer_remark: Option<String>,
+    pub buyer_remark: Option<BuyerRemark>,
     pub main_remark: Option<String>,
     pub customs_clearance_mark: Option<CustomsClearanceMark>,
     pub category: Option<String>,
@@ -171,7 +172,6 @@ impl F0401Invoice {
         validate_role(&self.main.seller, true, "Invoice/Main/Seller", &mut report);
         validate_role(&self.main.buyer, false, "Invoice/Main/Buyer", &mut report);
 
-        check_max(&self.main.buyer_remark, 1, "Invoice/Main/BuyerRemark", &mut report);
         check_max(&self.main.main_remark, 200, "Invoice/Main/MainRemark", &mut report);
         check_max(&self.main.category, 2, "Invoice/Main/Category", &mut report);
         check_max(&self.main.relate_number, 20, "Invoice/Main/RelateNumber", &mut report);
@@ -183,6 +183,16 @@ impl F0401Invoice {
         check_max(&self.main.reserved2, 100, "Invoice/Main/Reserved2", &mut report);
 
         let buyer_is_consumer = self.main.buyer.identifier.is_b2c_buyer();
+        if buyer_is_consumer
+            && matches!(self.main.buyer.name.as_str(), "0" | "00" | "000" | "0000")
+        {
+            push_issue(
+                &mut report,
+                "Invoice/Main/Buyer/Name",
+                "F0401_B2C_BUYER_NAME_INVALID",
+                "consumer identification text must not be 0, 00, 000 or 0000",
+            );
+        }
         match (&self.main.random_number, buyer_is_consumer) {
             (Some(value), _) if !is_four_digits(value) => push_issue(
                 &mut report,
@@ -255,6 +265,31 @@ impl F0401Invoice {
             check_max(&item.remark, 120, &format!("{base}/Remark"), &mut report);
             check_max(&item.relate_number, 50, &format!("{base}/RelateNumber"), &mut report);
 
+            check_decimal(
+                &item.quantity,
+                20,
+                7,
+                false,
+                &format!("{base}/Quantity"),
+                &mut report,
+            );
+            check_decimal(
+                &item.unit_price,
+                20,
+                7,
+                false,
+                &format!("{base}/UnitPrice"),
+                &mut report,
+            );
+            check_decimal(
+                &item.amount,
+                20,
+                7,
+                false,
+                &format!("{base}/Amount"),
+                &mut report,
+            );
+
             if item.tax_type == TaxType::Mixed {
                 push_issue(
                     &mut report,
@@ -275,6 +310,77 @@ impl F0401Invoice {
             expected_sequence += 1;
         }
 
+        check_decimal(
+            &self.amount.sales_amount,
+            20,
+            7,
+            true,
+            "Invoice/Amount/SalesAmount",
+            &mut report,
+        );
+        check_decimal(
+            &self.amount.free_tax_sales_amount,
+            20,
+            7,
+            true,
+            "Invoice/Amount/FreeTaxSalesAmount",
+            &mut report,
+        );
+        check_decimal(
+            &self.amount.zero_tax_sales_amount,
+            20,
+            7,
+            true,
+            "Invoice/Amount/ZeroTaxSalesAmount",
+            &mut report,
+        );
+        check_decimal(
+            &self.amount.tax_amount,
+            20,
+            0,
+            true,
+            "Invoice/Amount/TaxAmount",
+            &mut report,
+        );
+        check_decimal(
+            &self.amount.total_amount,
+            20,
+            7,
+            true,
+            "Invoice/Amount/TotalAmount",
+            &mut report,
+        );
+        if let Some(value) = &self.amount.discount_amount {
+            check_decimal(
+                value,
+                20,
+                7,
+                true,
+                "Invoice/Amount/DiscountAmount",
+                &mut report,
+            );
+        }
+        if let Some(value) = &self.amount.original_currency_amount {
+            check_decimal(
+                value,
+                20,
+                7,
+                true,
+                "Invoice/Amount/OriginalCurrencyAmount",
+                &mut report,
+            );
+        }
+        if let Some(value) = &self.amount.exchange_rate {
+            check_decimal(
+                value,
+                13,
+                5,
+                true,
+                "Invoice/Amount/ExchangeRate",
+                &mut report,
+            );
+        }
+
         report
     }
 
@@ -291,7 +397,9 @@ impl F0401Invoice {
         push_text_element(&mut output, "InvoiceTime", self.main.invoice_time.as_str());
         push_role(&mut output, "Seller", &self.main.seller);
         push_role(&mut output, "Buyer", &self.main.buyer);
-        push_optional(&mut output, "BuyerRemark", self.main.buyer_remark.as_deref());
+        if let Some(value) = self.main.buyer_remark {
+            push_text_element(&mut output, "BuyerRemark", value.wire_value());
+        }
         push_optional(&mut output, "MainRemark", self.main.main_remark.as_deref());
         if let Some(value) = self.main.customs_clearance_mark {
             push_text_element(&mut output, "CustomsClearanceMark", value.wire_value());
@@ -428,6 +536,29 @@ fn validate_role(
             &format!("{path}/Address"),
             "F0401_SELLER_ADDRESS_REQUIRED",
             "seller Address is required for F0401",
+        );
+    }
+}
+
+fn check_decimal(
+    value: &MigDecimal,
+    max_total_digits: usize,
+    max_fraction_digits: usize,
+    non_negative: bool,
+    path: &str,
+    report: &mut ValidationReport,
+) {
+    if let Err(error) = MigDecimal::parse(
+        value.as_str(),
+        max_total_digits,
+        max_fraction_digits,
+        non_negative,
+    ) {
+        push_issue(
+            report,
+            path,
+            "MIG_DECIMAL_CONSTRAINT",
+            &error.to_string(),
         );
     }
 }
