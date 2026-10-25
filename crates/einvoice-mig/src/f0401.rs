@@ -163,98 +163,85 @@ impl F0401Invoice {
         &self.details
     }
 
-    /// Runs semantic checks that are intentionally separate from XML lexical/schema constraints.
+    /// Validates constraints represented by the F0401 XSD shape and lexical facets.
     #[must_use]
-    pub fn validate(&self) -> ValidationReport {
+    pub fn validate_schema_constraints(&self) -> ValidationReport {
         let mut report = ValidationReport::default();
 
-        validate_date(&self.main.invoice_date, "Invoice/Main/InvoiceDate", &mut report);
-        validate_role(&self.main.seller, true, "Invoice/Main/Seller", &mut report);
-        validate_role(&self.main.buyer, false, "Invoice/Main/Buyer", &mut report);
-
-        check_max(&self.main.main_remark, 200, "Invoice/Main/MainRemark", &mut report);
+        validate_role_schema(&self.main.seller, "Invoice/Main/Seller", &mut report);
+        validate_role_schema(&self.main.buyer, "Invoice/Main/Buyer", &mut report);
+        check_max(
+            &self.main.main_remark,
+            200,
+            "Invoice/Main/MainRemark",
+            &mut report,
+        );
         check_max(&self.main.category, 2, "Invoice/Main/Category", &mut report);
-        check_max(&self.main.relate_number, 20, "Invoice/Main/RelateNumber", &mut report);
-        check_exact(&self.main.group_mark, 1, "Invoice/Main/GroupMark", &mut report);
-        check_max(&self.main.carrier_type, 6, "Invoice/Main/CarrierType", &mut report);
-        check_max(&self.main.carrier_id1, 400, "Invoice/Main/CarrierId1", &mut report);
-        check_max(&self.main.carrier_id2, 400, "Invoice/Main/CarrierId2", &mut report);
-        check_max(&self.main.reserved1, 20, "Invoice/Main/Reserved1", &mut report);
-        check_max(&self.main.reserved2, 100, "Invoice/Main/Reserved2", &mut report);
+        check_max(
+            &self.main.relate_number,
+            20,
+            "Invoice/Main/RelateNumber",
+            &mut report,
+        );
+        check_exact(
+            &self.main.group_mark,
+            1,
+            "Invoice/Main/GroupMark",
+            &mut report,
+        );
+        check_max(
+            &self.main.carrier_type,
+            6,
+            "Invoice/Main/CarrierType",
+            &mut report,
+        );
+        check_max(
+            &self.main.carrier_id1,
+            400,
+            "Invoice/Main/CarrierId1",
+            &mut report,
+        );
+        check_max(
+            &self.main.carrier_id2,
+            400,
+            "Invoice/Main/CarrierId2",
+            &mut report,
+        );
+        check_max(
+            &self.main.reserved1,
+            20,
+            "Invoice/Main/Reserved1",
+            &mut report,
+        );
+        check_max(
+            &self.main.reserved2,
+            100,
+            "Invoice/Main/Reserved2",
+            &mut report,
+        );
 
-        let buyer_is_consumer = self.main.buyer.identifier.is_b2c_buyer();
-        if buyer_is_consumer
-            && matches!(self.main.buyer.name.as_str(), "0" | "00" | "000" | "0000")
+        if self
+            .main
+            .random_number
+            .as_ref()
+            .is_some_and(|value| !is_four_digits(value))
         {
             push_issue(
-                &mut report,
-                "Invoice/Main/Buyer/Name",
-                "F0401_B2C_BUYER_NAME_INVALID",
-                "consumer identification text must not be 0, 00, 000 or 0000",
-            );
-        }
-        match (&self.main.random_number, buyer_is_consumer) {
-            (Some(value), _) if !is_four_digits(value) => push_issue(
                 &mut report,
                 "Invoice/Main/RandomNumber",
                 "F0401_RANDOM_NUMBER_FORMAT",
                 "RandomNumber must contain exactly four ASCII digits",
-            ),
-            (None, true) => push_issue(
-                &mut report,
-                "Invoice/Main/RandomNumber",
-                "F0401_B2C_RANDOM_NUMBER_REQUIRED",
-                "RandomNumber is required when the buyer identifier is 0000000000",
-            ),
-            (Some(_), false) => push_issue(
-                &mut report,
-                "Invoice/Main/RandomNumber",
-                "F0401_B2B_RANDOM_NUMBER_FORBIDDEN",
-                "RandomNumber must be omitted for a business or organization buyer",
-            ),
-            _ => {}
-        }
-
-        if self.main.print_mark == PrintMark::Print {
-            if self.main.carrier_type.is_some()
-                || self.main.carrier_id1.is_some()
-                || self.main.carrier_id2.is_some()
-            {
-                push_issue(
-                    &mut report,
-                    "Invoice/Main/PrintMark",
-                    "F0401_PRINT_WITH_CARRIER",
-                    "CarrierType, CarrierId1 and CarrierId2 must be omitted when PrintMark is Y",
-                );
-            }
-            if self.main.donate_mark != DonateMark::NotDonated {
-                push_issue(
-                    &mut report,
-                    "Invoice/Main/DonateMark",
-                    "F0401_PRINT_DONATION_CONFLICT",
-                    "DonateMark must be 0 when PrintMark is Y",
-                );
-            }
-        }
-
-        let zero_rated = self.amount.tax_type == TaxType::ZeroRated
-            || self
-                .details
-                .iter()
-                .any(|item| item.tax_type == TaxType::ZeroRated);
-        if zero_rated && self.main.zero_tax_rate_reason.is_none() {
-            push_issue(
-                &mut report,
-                "Invoice/Main/ZeroTaxRateReason",
-                "F0401_ZERO_RATE_REASON_REQUIRED",
-                "ZeroTaxRateReason is required when zero-rated tax is used",
             );
         }
 
-        let mut expected_sequence = 1usize;
         for (index, item) in self.details.iter().enumerate() {
             let base = format!("Invoice/Details/ProductItem[{}]", index + 1);
-            check_required_max(&item.description, 500, &format!("{base}/Description"), &mut report);
+            check_required_max(
+                &item.description,
+                500,
+                &format!("{base}/Description"),
+                &mut report,
+            );
             check_max(&item.unit, 6, &format!("{base}/Unit"), &mut report);
             check_required_max(
                 &item.sequence_number,
@@ -263,8 +250,12 @@ impl F0401Invoice {
                 &mut report,
             );
             check_max(&item.remark, 120, &format!("{base}/Remark"), &mut report);
-            check_max(&item.relate_number, 50, &format!("{base}/RelateNumber"), &mut report);
-
+            check_max(
+                &item.relate_number,
+                50,
+                &format!("{base}/RelateNumber"),
+                &mut report,
+            );
             check_decimal(
                 &item.quantity,
                 20,
@@ -289,25 +280,6 @@ impl F0401Invoice {
                 &format!("{base}/Amount"),
                 &mut report,
             );
-
-            if item.tax_type == TaxType::Mixed {
-                push_issue(
-                    &mut report,
-                    &format!("{base}/TaxType"),
-                    "F0401_PRODUCT_MIXED_TAX_FORBIDDEN",
-                    "ProductItem TaxType must not use mixed-tax value 9",
-                );
-            }
-
-            if item.sequence_number != expected_sequence.to_string() {
-                push_issue(
-                    &mut report,
-                    &format!("{base}/SequenceNumber"),
-                    "F0401_SEQUENCE_NOT_CONTIGUOUS",
-                    "SequenceNumber should follow the invoice-detail order starting at 1",
-                );
-            }
-            expected_sequence += 1;
         }
 
         check_decimal(
@@ -381,6 +353,124 @@ impl F0401Invoice {
             );
         }
 
+        report
+    }
+
+    /// Validates MIG usage notes and cross-field business semantics separately
+    /// from schema/lexical constraints.
+    #[must_use]
+    pub fn validate_semantics(&self) -> ValidationReport {
+        let mut report = ValidationReport::default();
+
+        validate_date(
+            &self.main.invoice_date,
+            "Invoice/Main/InvoiceDate",
+            &mut report,
+        );
+
+        if self.main.seller.address.as_deref().is_none_or(str::is_empty) {
+            push_issue(
+                &mut report,
+                "Invoice/Main/Seller/Address",
+                "F0401_SELLER_ADDRESS_REQUIRED",
+                "seller Address is required for F0401",
+            );
+        }
+
+        let buyer_is_consumer = self.main.buyer.identifier.is_b2c_buyer();
+        if buyer_is_consumer
+            && matches!(self.main.buyer.name.as_str(), "0" | "00" | "000" | "0000")
+        {
+            push_issue(
+                &mut report,
+                "Invoice/Main/Buyer/Name",
+                "F0401_B2C_BUYER_NAME_INVALID",
+                "consumer identification text must not be 0, 00, 000 or 0000",
+            );
+        }
+        match (&self.main.random_number, buyer_is_consumer) {
+            (None, true) => push_issue(
+                &mut report,
+                "Invoice/Main/RandomNumber",
+                "F0401_B2C_RANDOM_NUMBER_REQUIRED",
+                "RandomNumber is required when the buyer identifier is 0000000000",
+            ),
+            (Some(_), false) => push_issue(
+                &mut report,
+                "Invoice/Main/RandomNumber",
+                "F0401_B2B_RANDOM_NUMBER_FORBIDDEN",
+                "RandomNumber must be omitted for a business or organization buyer",
+            ),
+            _ => {}
+        }
+
+        if self.main.print_mark == PrintMark::Print {
+            if self.main.carrier_type.is_some()
+                || self.main.carrier_id1.is_some()
+                || self.main.carrier_id2.is_some()
+            {
+                push_issue(
+                    &mut report,
+                    "Invoice/Main/PrintMark",
+                    "F0401_PRINT_WITH_CARRIER",
+                    "CarrierType, CarrierId1 and CarrierId2 must be omitted when PrintMark is Y",
+                );
+            }
+            if self.main.donate_mark != DonateMark::NotDonated {
+                push_issue(
+                    &mut report,
+                    "Invoice/Main/DonateMark",
+                    "F0401_PRINT_DONATION_CONFLICT",
+                    "DonateMark must be 0 when PrintMark is Y",
+                );
+            }
+        }
+
+        let zero_rated = self.amount.tax_type == TaxType::ZeroRated
+            || self
+                .details
+                .iter()
+                .any(|item| item.tax_type == TaxType::ZeroRated);
+        if zero_rated && self.main.zero_tax_rate_reason.is_none() {
+            push_issue(
+                &mut report,
+                "Invoice/Main/ZeroTaxRateReason",
+                "F0401_ZERO_RATE_REASON_REQUIRED",
+                "ZeroTaxRateReason is required when zero-rated tax is used",
+            );
+        }
+
+        for (index, item) in self.details.iter().enumerate() {
+            let base = format!("Invoice/Details/ProductItem[{}]", index + 1);
+            if item.tax_type == TaxType::Mixed {
+                push_issue(
+                    &mut report,
+                    &format!("{base}/TaxType"),
+                    "F0401_PRODUCT_MIXED_TAX_FORBIDDEN",
+                    "ProductItem TaxType must not use mixed-tax value 9",
+                );
+            }
+
+            if item.sequence_number != (index + 1).to_string() {
+                push_issue(
+                    &mut report,
+                    &format!("{base}/SequenceNumber"),
+                    "F0401_SEQUENCE_NOT_CONTIGUOUS",
+                    "SequenceNumber should follow the invoice-detail order starting at 1",
+                );
+            }
+        }
+
+        report
+    }
+
+    /// Runs both schema/lexical and semantic validation layers.
+    #[must_use]
+    pub fn validate(&self) -> ValidationReport {
+        let mut report = self.validate_schema_constraints();
+        report
+            .issues
+            .extend(self.validate_semantics().issues);
         report
     }
 
@@ -486,12 +576,7 @@ fn validate_date(date: &MigDate, path: &str, report: &mut ValidationReport) {
     }
 }
 
-fn validate_role(
-    role: &RoleDescription,
-    seller: bool,
-    path: &str,
-    report: &mut ValidationReport,
-) {
+fn validate_role_schema(role: &RoleDescription, path: &str, report: &mut ValidationReport) {
     check_required_max(&role.name, 60, &format!("{path}/Name"), report);
     check_max(&role.address, 100, &format!("{path}/Address"), report);
     check_max(
@@ -530,14 +615,6 @@ fn validate_role(
         &format!("{path}/RoleRemark"),
         report,
     );
-    if seller && role.address.as_deref().is_none_or(str::is_empty) {
-        push_issue(
-            report,
-            &format!("{path}/Address"),
-            "F0401_SELLER_ADDRESS_REQUIRED",
-            "seller Address is required for F0401",
-        );
-    }
 }
 
 fn check_decimal(
