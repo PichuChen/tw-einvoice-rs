@@ -166,192 +166,9 @@ impl F0401Invoice {
     #[must_use]
     pub fn validate_schema_constraints(&self) -> ValidationReport {
         let mut report = ValidationReport::default();
-
-        validate_role_schema(&self.main.seller, "Invoice/Main/Seller", &mut report);
-        validate_role_schema(&self.main.buyer, "Invoice/Main/Buyer", &mut report);
-        check_max(
-            &self.main.main_remark,
-            200,
-            "Invoice/Main/MainRemark",
-            &mut report,
-        );
-        check_max(&self.main.category, 2, "Invoice/Main/Category", &mut report);
-        check_max(
-            &self.main.relate_number,
-            20,
-            "Invoice/Main/RelateNumber",
-            &mut report,
-        );
-        check_exact(
-            &self.main.group_mark,
-            1,
-            "Invoice/Main/GroupMark",
-            &mut report,
-        );
-        check_max(
-            &self.main.carrier_type,
-            6,
-            "Invoice/Main/CarrierType",
-            &mut report,
-        );
-        check_max(
-            &self.main.carrier_id1,
-            400,
-            "Invoice/Main/CarrierId1",
-            &mut report,
-        );
-        check_max(
-            &self.main.carrier_id2,
-            400,
-            "Invoice/Main/CarrierId2",
-            &mut report,
-        );
-        check_max(
-            &self.main.reserved1,
-            20,
-            "Invoice/Main/Reserved1",
-            &mut report,
-        );
-        check_max(
-            &self.main.reserved2,
-            100,
-            "Invoice/Main/Reserved2",
-            &mut report,
-        );
-
-        if self
-            .main
-            .random_number
-            .as_ref()
-            .is_some_and(|value| !is_four_digits(value))
-        {
-            push_issue(
-                &mut report,
-                "Invoice/Main/RandomNumber",
-                "F0401_RANDOM_NUMBER_FORMAT",
-                "RandomNumber must contain exactly four ASCII digits",
-            );
-        }
-
-        for (index, item) in self.details.iter().enumerate() {
-            let base = format!("Invoice/Details/ProductItem[{}]", index + 1);
-            check_required_max(
-                &item.description,
-                500,
-                &format!("{base}/Description"),
-                &mut report,
-            );
-            check_max(&item.unit, 6, &format!("{base}/Unit"), &mut report);
-            check_required_max(
-                &item.sequence_number,
-                4,
-                &format!("{base}/SequenceNumber"),
-                &mut report,
-            );
-            check_max(&item.remark, 120, &format!("{base}/Remark"), &mut report);
-            check_max(
-                &item.relate_number,
-                50,
-                &format!("{base}/RelateNumber"),
-                &mut report,
-            );
-            check_decimal(
-                &item.quantity,
-                20,
-                7,
-                false,
-                &format!("{base}/Quantity"),
-                &mut report,
-            );
-            check_decimal(
-                &item.unit_price,
-                20,
-                7,
-                false,
-                &format!("{base}/UnitPrice"),
-                &mut report,
-            );
-            check_decimal(
-                &item.amount,
-                20,
-                7,
-                false,
-                &format!("{base}/Amount"),
-                &mut report,
-            );
-        }
-
-        check_decimal(
-            &self.amount.sales_amount,
-            20,
-            7,
-            true,
-            "Invoice/Amount/SalesAmount",
-            &mut report,
-        );
-        check_decimal(
-            &self.amount.free_tax_sales_amount,
-            20,
-            7,
-            true,
-            "Invoice/Amount/FreeTaxSalesAmount",
-            &mut report,
-        );
-        check_decimal(
-            &self.amount.zero_tax_sales_amount,
-            20,
-            7,
-            true,
-            "Invoice/Amount/ZeroTaxSalesAmount",
-            &mut report,
-        );
-        check_decimal(
-            &self.amount.tax_amount,
-            20,
-            0,
-            true,
-            "Invoice/Amount/TaxAmount",
-            &mut report,
-        );
-        check_decimal(
-            &self.amount.total_amount,
-            20,
-            7,
-            true,
-            "Invoice/Amount/TotalAmount",
-            &mut report,
-        );
-        if let Some(value) = &self.amount.discount_amount {
-            check_decimal(
-                value,
-                20,
-                7,
-                true,
-                "Invoice/Amount/DiscountAmount",
-                &mut report,
-            );
-        }
-        if let Some(value) = &self.amount.original_currency_amount {
-            check_decimal(
-                value,
-                20,
-                7,
-                true,
-                "Invoice/Amount/OriginalCurrencyAmount",
-                &mut report,
-            );
-        }
-        if let Some(value) = &self.amount.exchange_rate {
-            check_decimal(
-                value,
-                13,
-                5,
-                true,
-                "Invoice/Amount/ExchangeRate",
-                &mut report,
-            );
-        }
-
+        validate_main_schema(&self.main, &mut report);
+        validate_details_schema(&self.details, &mut report);
+        validate_amount_schema(&self.amount, &mut report);
         report
     }
 
@@ -482,121 +299,252 @@ impl F0401Invoice {
         let mut output = String::with_capacity(2048 + self.details.len() * 256);
         output.push_str("<Invoice xmlns=\"");
         output.push_str(F0401_NAMESPACE);
-        output.push_str("\"><Main>");
-
-        push_text_element(
-            &mut output,
-            "InvoiceNumber",
-            self.main.invoice_number.as_str(),
-        );
-        push_text_element(&mut output, "InvoiceDate", self.main.invoice_date.as_str());
-        push_text_element(&mut output, "InvoiceTime", self.main.invoice_time.as_str());
-        push_role(&mut output, "Seller", &self.main.seller);
-        push_role(&mut output, "Buyer", &self.main.buyer);
-        if let Some(value) = self.main.buyer_remark {
-            push_text_element(&mut output, "BuyerRemark", value.wire_value());
-        }
-        push_optional(&mut output, "MainRemark", self.main.main_remark.as_deref());
-        if let Some(value) = self.main.customs_clearance_mark {
-            push_text_element(&mut output, "CustomsClearanceMark", value.wire_value());
-        }
-        push_optional(&mut output, "Category", self.main.category.as_deref());
-        push_optional(
-            &mut output,
-            "RelateNumber",
-            self.main.relate_number.as_deref(),
-        );
-        push_text_element(
-            &mut output,
-            "InvoiceType",
-            self.main.invoice_type.wire_value(),
-        );
-        push_optional(&mut output, "GroupMark", self.main.group_mark.as_deref());
-        push_text_element(
-            &mut output,
-            "DonateMark",
-            self.main.donate_mark.wire_value(),
-        );
-        push_optional(
-            &mut output,
-            "CarrierType",
-            self.main.carrier_type.as_deref(),
-        );
-        push_optional(&mut output, "CarrierId1", self.main.carrier_id1.as_deref());
-        push_optional(&mut output, "CarrierId2", self.main.carrier_id2.as_deref());
-        push_text_element(&mut output, "PrintMark", self.main.print_mark.wire_value());
-        if let Some(value) = &self.main.npo_ban {
-            push_text_element(&mut output, "NPOBAN", value.as_str());
-        }
-        push_optional(
-            &mut output,
-            "RandomNumber",
-            self.main.random_number.as_deref(),
-        );
-        if let Some(value) = self.main.bonded_area_confirm {
-            push_text_element(&mut output, "BondedAreaConfirm", value.wire_value());
-        }
-        if let Some(value) = self.main.zero_tax_rate_reason {
-            push_text_element(&mut output, "ZeroTaxRateReason", &value.wire_value());
-        }
-        push_optional(&mut output, "Reserved1", self.main.reserved1.as_deref());
-        push_optional(&mut output, "Reserved2", self.main.reserved2.as_deref());
-
-        output.push_str("</Main><Details>");
-        for item in &self.details {
-            output.push_str("<ProductItem>");
-            push_text_element(&mut output, "Description", &item.description);
-            push_text_element(&mut output, "Quantity", item.quantity.as_str());
-            push_optional(&mut output, "Unit", item.unit.as_deref());
-            push_text_element(&mut output, "UnitPrice", item.unit_price.as_str());
-            push_text_element(&mut output, "TaxType", item.tax_type.wire_value());
-            push_text_element(&mut output, "Amount", item.amount.as_str());
-            push_text_element(&mut output, "SequenceNumber", &item.sequence_number);
-            push_optional(&mut output, "Remark", item.remark.as_deref());
-            push_optional(&mut output, "RelateNumber", item.relate_number.as_deref());
-            output.push_str("</ProductItem>");
-        }
-        output.push_str("</Details><Amount>");
-
-        push_text_element(
-            &mut output,
-            "SalesAmount",
-            self.amount.sales_amount.as_str(),
-        );
-        push_text_element(
-            &mut output,
-            "FreeTaxSalesAmount",
-            self.amount.free_tax_sales_amount.as_str(),
-        );
-        push_text_element(
-            &mut output,
-            "ZeroTaxSalesAmount",
-            self.amount.zero_tax_sales_amount.as_str(),
-        );
-        push_text_element(&mut output, "TaxType", self.amount.tax_type.wire_value());
-        push_text_element(&mut output, "TaxRate", self.amount.tax_rate.wire_value());
-        push_text_element(&mut output, "TaxAmount", self.amount.tax_amount.as_str());
-        push_text_element(
-            &mut output,
-            "TotalAmount",
-            self.amount.total_amount.as_str(),
-        );
-        if let Some(value) = &self.amount.discount_amount {
-            push_text_element(&mut output, "DiscountAmount", value.as_str());
-        }
-        if let Some(value) = &self.amount.original_currency_amount {
-            push_text_element(&mut output, "OriginalCurrencyAmount", value.as_str());
-        }
-        if let Some(value) = &self.amount.exchange_rate {
-            push_text_element(&mut output, "ExchangeRate", value.as_str());
-        }
-        if let Some(value) = &self.amount.currency {
-            push_text_element(&mut output, "Currency", value.as_str());
-        }
-
-        output.push_str("</Amount></Invoice>");
+        output.push_str("\">");
+        push_main_xml(&mut output, &self.main);
+        push_details_xml(&mut output, &self.details);
+        push_amount_xml(&mut output, &self.amount);
+        output.push_str("</Invoice>");
         output
     }
+
+}
+
+fn validate_main_schema(main: &F0401Main, report: &mut ValidationReport) {
+    validate_role_schema(&main.seller, "Invoice/Main/Seller", report);
+    validate_role_schema(&main.buyer, "Invoice/Main/Buyer", report);
+    check_max(main.main_remark.as_deref(), 200, "Invoice/Main/MainRemark", report);
+    check_max(main.category.as_deref(), 2, "Invoice/Main/Category", report);
+    check_max(main.relate_number.as_deref(), 20, "Invoice/Main/RelateNumber", report);
+    check_exact(main.group_mark.as_deref(), 1, "Invoice/Main/GroupMark", report);
+    check_max(main.carrier_type.as_deref(), 6, "Invoice/Main/CarrierType", report);
+    check_max(main.carrier_id1.as_deref(), 400, "Invoice/Main/CarrierId1", report);
+    check_max(main.carrier_id2.as_deref(), 400, "Invoice/Main/CarrierId2", report);
+    check_max(main.reserved1.as_deref(), 20, "Invoice/Main/Reserved1", report);
+    check_max(main.reserved2.as_deref(), 100, "Invoice/Main/Reserved2", report);
+
+    if main
+        .random_number
+        .as_deref()
+        .is_some_and(|value| !is_four_digits(value))
+    {
+        push_issue(
+            report,
+            "Invoice/Main/RandomNumber",
+            "F0401_RANDOM_NUMBER_FORMAT",
+            "RandomNumber must contain exactly four ASCII digits",
+        );
+    }
+}
+
+fn validate_details_schema(details: &[ProductItem], report: &mut ValidationReport) {
+    for (index, item) in details.iter().enumerate() {
+        let base = format!("Invoice/Details/ProductItem[{}]", index + 1);
+        check_required_max(
+            &item.description,
+            500,
+            &format!("{base}/Description"),
+            report,
+        );
+        check_max(item.unit.as_deref(), 6, &format!("{base}/Unit"), report);
+        check_required_max(
+            &item.sequence_number,
+            4,
+            &format!("{base}/SequenceNumber"),
+            report,
+        );
+        check_max(item.remark.as_deref(), 120, &format!("{base}/Remark"), report);
+        check_max(
+            item.relate_number.as_deref(),
+            50,
+            &format!("{base}/RelateNumber"),
+            report,
+        );
+        check_decimal(
+            &item.quantity,
+            20,
+            7,
+            false,
+            &format!("{base}/Quantity"),
+            report,
+        );
+        check_decimal(
+            &item.unit_price,
+            20,
+            7,
+            false,
+            &format!("{base}/UnitPrice"),
+            report,
+        );
+        check_decimal(
+            &item.amount,
+            20,
+            7,
+            false,
+            &format!("{base}/Amount"),
+            report,
+        );
+    }
+}
+
+fn validate_amount_schema(amount: &F0401Amount, report: &mut ValidationReport) {
+    check_decimal(
+        &amount.sales_amount,
+        20,
+        7,
+        true,
+        "Invoice/Amount/SalesAmount",
+        report,
+    );
+    check_decimal(
+        &amount.free_tax_sales_amount,
+        20,
+        7,
+        true,
+        "Invoice/Amount/FreeTaxSalesAmount",
+        report,
+    );
+    check_decimal(
+        &amount.zero_tax_sales_amount,
+        20,
+        7,
+        true,
+        "Invoice/Amount/ZeroTaxSalesAmount",
+        report,
+    );
+    check_decimal(
+        &amount.tax_amount,
+        20,
+        0,
+        true,
+        "Invoice/Amount/TaxAmount",
+        report,
+    );
+    check_decimal(
+        &amount.total_amount,
+        20,
+        7,
+        true,
+        "Invoice/Amount/TotalAmount",
+        report,
+    );
+    if let Some(value) = &amount.discount_amount {
+        check_decimal(
+            value,
+            20,
+            7,
+            true,
+            "Invoice/Amount/DiscountAmount",
+            report,
+        );
+    }
+    if let Some(value) = &amount.original_currency_amount {
+        check_decimal(
+            value,
+            20,
+            7,
+            true,
+            "Invoice/Amount/OriginalCurrencyAmount",
+            report,
+        );
+    }
+    if let Some(value) = &amount.exchange_rate {
+        check_decimal(
+            value,
+            13,
+            5,
+            true,
+            "Invoice/Amount/ExchangeRate",
+            report,
+        );
+    }
+}
+
+fn push_main_xml(output: &mut String, main: &F0401Main) {
+    output.push_str("<Main>");
+    push_text_element(output, "InvoiceNumber", main.invoice_number.as_str());
+    push_text_element(output, "InvoiceDate", main.invoice_date.as_str());
+    push_text_element(output, "InvoiceTime", main.invoice_time.as_str());
+    push_role(output, "Seller", &main.seller);
+    push_role(output, "Buyer", &main.buyer);
+    if let Some(value) = main.buyer_remark {
+        push_text_element(output, "BuyerRemark", value.wire_value());
+    }
+    push_optional(output, "MainRemark", main.main_remark.as_deref());
+    if let Some(value) = main.customs_clearance_mark {
+        push_text_element(output, "CustomsClearanceMark", value.wire_value());
+    }
+    push_optional(output, "Category", main.category.as_deref());
+    push_optional(output, "RelateNumber", main.relate_number.as_deref());
+    push_text_element(output, "InvoiceType", main.invoice_type.wire_value());
+    push_optional(output, "GroupMark", main.group_mark.as_deref());
+    push_text_element(output, "DonateMark", main.donate_mark.wire_value());
+    push_optional(output, "CarrierType", main.carrier_type.as_deref());
+    push_optional(output, "CarrierId1", main.carrier_id1.as_deref());
+    push_optional(output, "CarrierId2", main.carrier_id2.as_deref());
+    push_text_element(output, "PrintMark", main.print_mark.wire_value());
+    if let Some(value) = &main.npo_ban {
+        push_text_element(output, "NPOBAN", value.as_str());
+    }
+    push_optional(output, "RandomNumber", main.random_number.as_deref());
+    if let Some(value) = main.bonded_area_confirm {
+        push_text_element(output, "BondedAreaConfirm", value.wire_value());
+    }
+    if let Some(value) = main.zero_tax_rate_reason {
+        push_text_element(output, "ZeroTaxRateReason", &value.wire_value());
+    }
+    push_optional(output, "Reserved1", main.reserved1.as_deref());
+    push_optional(output, "Reserved2", main.reserved2.as_deref());
+    output.push_str("</Main>");
+}
+
+fn push_details_xml(output: &mut String, details: &[ProductItem]) {
+    output.push_str("<Details>");
+    for item in details {
+        output.push_str("<ProductItem>");
+        push_text_element(output, "Description", &item.description);
+        push_text_element(output, "Quantity", item.quantity.as_str());
+        push_optional(output, "Unit", item.unit.as_deref());
+        push_text_element(output, "UnitPrice", item.unit_price.as_str());
+        push_text_element(output, "TaxType", item.tax_type.wire_value());
+        push_text_element(output, "Amount", item.amount.as_str());
+        push_text_element(output, "SequenceNumber", &item.sequence_number);
+        push_optional(output, "Remark", item.remark.as_deref());
+        push_optional(output, "RelateNumber", item.relate_number.as_deref());
+        output.push_str("</ProductItem>");
+    }
+    output.push_str("</Details>");
+}
+
+fn push_amount_xml(output: &mut String, amount: &F0401Amount) {
+    output.push_str("<Amount>");
+    push_text_element(output, "SalesAmount", amount.sales_amount.as_str());
+    push_text_element(
+        output,
+        "FreeTaxSalesAmount",
+        amount.free_tax_sales_amount.as_str(),
+    );
+    push_text_element(
+        output,
+        "ZeroTaxSalesAmount",
+        amount.zero_tax_sales_amount.as_str(),
+    );
+    push_text_element(output, "TaxType", amount.tax_type.wire_value());
+    push_text_element(output, "TaxRate", amount.tax_rate.wire_value());
+    push_text_element(output, "TaxAmount", amount.tax_amount.as_str());
+    push_text_element(output, "TotalAmount", amount.total_amount.as_str());
+    if let Some(value) = &amount.discount_amount {
+        push_text_element(output, "DiscountAmount", value.as_str());
+    }
+    if let Some(value) = &amount.original_currency_amount {
+        push_text_element(output, "OriginalCurrencyAmount", value.as_str());
+    }
+    if let Some(value) = &amount.exchange_rate {
+        push_text_element(output, "ExchangeRate", value.as_str());
+    }
+    if let Some(value) = &amount.currency {
+        push_text_element(output, "Currency", value.as_str());
+    }
+    output.push_str("</Amount>");
 }
 
 fn validate_date(date: &MigDate, path: &str, report: &mut ValidationReport) {
@@ -612,38 +560,43 @@ fn validate_date(date: &MigDate, path: &str, report: &mut ValidationReport) {
 
 fn validate_role_schema(role: &RoleDescription, path: &str, report: &mut ValidationReport) {
     check_required_max(&role.name, 60, &format!("{path}/Name"), report);
-    check_max(&role.address, 100, &format!("{path}/Address"), report);
+    check_max(role.address.as_deref(), 100, &format!("{path}/Address"), report);
     check_max(
-        &role.person_in_charge,
+        role.person_in_charge.as_deref(),
         30,
         &format!("{path}/PersonInCharge"),
         report,
     );
     check_max(
-        &role.telephone_number,
+        role.telephone_number.as_deref(),
         26,
         &format!("{path}/TelephoneNumber"),
         report,
     );
     check_max(
-        &role.facsimile_number,
+        role.facsimile_number.as_deref(),
         26,
         &format!("{path}/FacsimileNumber"),
         report,
     );
     check_max(
-        &role.email_address,
+        role.email_address.as_deref(),
         400,
         &format!("{path}/EmailAddress"),
         report,
     );
     check_max(
-        &role.customer_number,
+        role.customer_number.as_deref(),
         20,
         &format!("{path}/CustomerNumber"),
         report,
     );
-    check_exact(&role.role_remark, 40, &format!("{path}/RoleRemark"), report);
+    check_exact(
+        role.role_remark.as_deref(),
+        40,
+        &format!("{path}/RoleRemark"),
+        report,
+    );
 }
 
 fn check_decimal(
@@ -676,11 +629,8 @@ fn check_required_max(value: &str, max: usize, path: &str, report: &mut Validati
     }
 }
 
-fn check_max(value: &Option<String>, max: usize, path: &str, report: &mut ValidationReport) {
-    if value
-        .as_ref()
-        .is_some_and(|value| value.chars().count() > max)
-    {
+fn check_max(value: Option<&str>, max: usize, path: &str, report: &mut ValidationReport) {
+    if value.is_some_and(|value| value.chars().count() > max) {
         push_issue(
             report,
             path,
@@ -690,11 +640,8 @@ fn check_max(value: &Option<String>, max: usize, path: &str, report: &mut Valida
     }
 }
 
-fn check_exact(value: &Option<String>, length: usize, path: &str, report: &mut ValidationReport) {
-    if value
-        .as_ref()
-        .is_some_and(|value| value.chars().count() != length)
-    {
+fn check_exact(value: Option<&str>, length: usize, path: &str, report: &mut ValidationReport) {
+    if value.is_some_and(|value| value.chars().count() != length) {
         push_issue(
             report,
             path,
