@@ -1,6 +1,20 @@
 #![forbid(unsafe_code)]
 
+pub mod catalog;
+pub mod f0401;
+pub mod primitives;
+
 use tw_einvoice_core::{MessageCode, MigVersion};
+
+pub use catalog::{Mig41MessageCode, UnknownMig41MessageCode};
+pub use f0401::{
+    F0401Amount, F0401Invoice, F0401Main, F0401StructureError, ProductItem, RoleDescription,
+    F0401_NAMESPACE,
+};
+pub use primitives::{
+    BondedArea, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber, InvoiceType,
+    MigDate, MigDecimal, MigTime, PrimitiveError, PrintMark, TaxRate, TaxType, ZeroTaxRateReason,
+};
 
 /// Metadata common to a MIG document before message-specific parsing is added.
 #[derive(Debug, Clone, PartialEq, Eq)]
