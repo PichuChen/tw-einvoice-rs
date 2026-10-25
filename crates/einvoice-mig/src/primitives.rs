@@ -279,6 +279,26 @@ impl TaxRate {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BuyerRemark {
+    DeductibleExpense,
+    DeductibleFixedAsset,
+    NonDeductibleExpense,
+    NonDeductibleFixedAsset,
+}
+
+impl BuyerRemark {
+    #[must_use]
+    pub const fn wire_value(self) -> &'static str {
+        match self {
+            Self::DeductibleExpense => "1",
+            Self::DeductibleFixedAsset => "2",
+            Self::NonDeductibleExpense => "3",
+            Self::NonDeductibleFixedAsset => "4",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum CustomsClearanceMark {
     NotThroughCustoms,
     ThroughCustoms,
