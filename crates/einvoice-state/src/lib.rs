@@ -189,22 +189,30 @@ impl SubmissionRecord {
         &mut self,
         result: &SummaryResult,
     ) -> Result<ApplyOutcome, ApplyError> {
-        let matching: Vec<&SummaryMessage> = result
+        let mut matching = result
             .messages
             .iter()
-            .filter(|message| message.info.id == self.message_id)
-            .collect();
+            .filter(|message| message.info.id == self.message_id);
 
-        match matching.as_slice() {
-            [] => Err(ApplyError::SummaryMessageMissing {
+        let Some(message) = matching.next() else {
+            return Err(ApplyError::SummaryMessageMissing {
                 message_id: self.message_id.clone(),
-            }),
-            [message] => self.apply_summary_message((*message).clone()),
-            messages => Err(ApplyError::DuplicateSummaryMessage {
+            });
+        };
+
+        if matching.next().is_some() {
+            let count = result
+                .messages
+                .iter()
+                .filter(|candidate| candidate.info.id == self.message_id)
+                .count();
+            return Err(ApplyError::DuplicateSummaryMessage {
                 message_id: self.message_id.clone(),
-                count: messages.len(),
-            }),
+                count,
+            });
         }
+
+        self.apply_summary_message(message.clone())
     }
 
     /// Applies one terminal SummaryMessage after count validation.
