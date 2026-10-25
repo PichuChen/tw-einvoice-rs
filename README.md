@@ -91,3 +91,7 @@ Apache-2.0.
 
 The specification-driven F0401 model, validation layers, and deterministic XML
 fixture are documented in [`docs/mig41-f0401.md`](docs/mig41-f0401.md).
+
+The offline F0401 → Envelope → RSA/PFX CMS → plain/ZIP SendFile → PFS001
+integration tests and their verification boundaries are documented in
+[`docs/full-chain-interoperability.md`](docs/full-chain-interoperability.md).
