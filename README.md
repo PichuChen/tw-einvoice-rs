@@ -85,3 +85,9 @@ artifacts belong in this repository.
 ## License
 
 Apache-2.0.
+
+
+## MIG 4.1
+
+The specification-driven F0401 model, validation layers, and deterministic XML
+fixture are documented in [`docs/mig41-f0401.md`](docs/mig41-f0401.md).
