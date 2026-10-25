@@ -654,42 +654,8 @@ mod tests {
 
     #[test]
     fn emits_deterministic_mig41_xml() {
-        let xml = invoice().to_xml();
-        assert_eq!(
-            xml,
-            concat!(
-                "<Invoice xmlns=\"urn:GEINV:eInvoiceMessage:F0401:4.1\">",
-                "<Main>",
-                "<InvoiceNumber>QQ12345678</InvoiceNumber>",
-                "<InvoiceDate>20261025</InvoiceDate>",
-                "<InvoiceTime>14:30:00</InvoiceTime>",
-                "<Seller><Identifier>12345678</Identifier><Name>Synthetic Seller &amp; Co</Name><Address>Taipei &lt;Test&gt;</Address></Seller>",
-                "<Buyer><Identifier>0000000000</Identifier><Name>ABCD</Name></Buyer>",
-                "<InvoiceType>07</InvoiceType>",
-                "<DonateMark>0</DonateMark>",
-                "<PrintMark>Y</PrintMark>",
-                "<RandomNumber>1234</RandomNumber>",
-                "</Main>",
-                "<Details><ProductItem>",
-                "<Description>Synthetic product</Description>",
-                "<Quantity>1</Quantity>",
-                "<UnitPrice>100</UnitPrice>",
-                "<TaxType>1</TaxType>",
-                "<Amount>100</Amount>",
-                "<SequenceNumber>1</SequenceNumber>",
-                "</ProductItem></Details>",
-                "<Amount>",
-                "<SalesAmount>100</SalesAmount>",
-                "<FreeTaxSalesAmount>0</FreeTaxSalesAmount>",
-                "<ZeroTaxSalesAmount>0</ZeroTaxSalesAmount>",
-                "<TaxType>1</TaxType>",
-                "<TaxRate>0.05</TaxRate>",
-                "<TaxAmount>5</TaxAmount>",
-                "<TotalAmount>105</TotalAmount>",
-                "</Amount>",
-                "</Invoice>"
-            )
-        );
+        let expected = include_str!("../tests/fixtures/f0401-synthetic.xml");
+        assert_eq!(invoice().to_xml(), expected);
     }
 
     #[test]
