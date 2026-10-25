@@ -6,8 +6,7 @@ use crate::{
     ValidationIssue, ValidationReport,
     primitives::{
         BondedArea, BuyerRemark, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber,
-        InvoiceType, MigDate, MigDecimal, MigTime, PrintMark, TaxRate, TaxType,
-        ZeroTaxRateReason,
+        InvoiceType, MigDate, MigDecimal, MigTime, PrintMark, TaxRate, TaxType, ZeroTaxRateReason,
     },
 };
 
@@ -368,7 +367,13 @@ impl F0401Invoice {
             &mut report,
         );
 
-        if self.main.seller.address.as_deref().is_none_or(str::is_empty) {
+        if self
+            .main
+            .seller
+            .address
+            .as_deref()
+            .is_none_or(str::is_empty)
+        {
             push_issue(
                 &mut report,
                 "Invoice/Main/Seller/Address",
@@ -378,8 +383,7 @@ impl F0401Invoice {
         }
 
         let buyer_is_consumer = self.main.buyer.identifier.is_b2c_buyer();
-        if buyer_is_consumer
-            && matches!(self.main.buyer.name.as_str(), "0" | "00" | "000" | "0000")
+        if buyer_is_consumer && matches!(self.main.buyer.name.as_str(), "0" | "00" | "000" | "0000")
         {
             push_issue(
                 &mut report,
@@ -468,9 +472,7 @@ impl F0401Invoice {
     #[must_use]
     pub fn validate(&self) -> ValidationReport {
         let mut report = self.validate_schema_constraints();
-        report
-            .issues
-            .extend(self.validate_semantics().issues);
+        report.issues.extend(self.validate_semantics().issues);
         report
     }
 
@@ -482,7 +484,11 @@ impl F0401Invoice {
         output.push_str(F0401_NAMESPACE);
         output.push_str("\"><Main>");
 
-        push_text_element(&mut output, "InvoiceNumber", self.main.invoice_number.as_str());
+        push_text_element(
+            &mut output,
+            "InvoiceNumber",
+            self.main.invoice_number.as_str(),
+        );
         push_text_element(&mut output, "InvoiceDate", self.main.invoice_date.as_str());
         push_text_element(&mut output, "InvoiceTime", self.main.invoice_time.as_str());
         push_role(&mut output, "Seller", &self.main.seller);
@@ -495,18 +501,38 @@ impl F0401Invoice {
             push_text_element(&mut output, "CustomsClearanceMark", value.wire_value());
         }
         push_optional(&mut output, "Category", self.main.category.as_deref());
-        push_optional(&mut output, "RelateNumber", self.main.relate_number.as_deref());
-        push_text_element(&mut output, "InvoiceType", self.main.invoice_type.wire_value());
+        push_optional(
+            &mut output,
+            "RelateNumber",
+            self.main.relate_number.as_deref(),
+        );
+        push_text_element(
+            &mut output,
+            "InvoiceType",
+            self.main.invoice_type.wire_value(),
+        );
         push_optional(&mut output, "GroupMark", self.main.group_mark.as_deref());
-        push_text_element(&mut output, "DonateMark", self.main.donate_mark.wire_value());
-        push_optional(&mut output, "CarrierType", self.main.carrier_type.as_deref());
+        push_text_element(
+            &mut output,
+            "DonateMark",
+            self.main.donate_mark.wire_value(),
+        );
+        push_optional(
+            &mut output,
+            "CarrierType",
+            self.main.carrier_type.as_deref(),
+        );
         push_optional(&mut output, "CarrierId1", self.main.carrier_id1.as_deref());
         push_optional(&mut output, "CarrierId2", self.main.carrier_id2.as_deref());
         push_text_element(&mut output, "PrintMark", self.main.print_mark.wire_value());
         if let Some(value) = &self.main.npo_ban {
             push_text_element(&mut output, "NPOBAN", value.as_str());
         }
-        push_optional(&mut output, "RandomNumber", self.main.random_number.as_deref());
+        push_optional(
+            &mut output,
+            "RandomNumber",
+            self.main.random_number.as_deref(),
+        );
         if let Some(value) = self.main.bonded_area_confirm {
             push_text_element(&mut output, "BondedAreaConfirm", value.wire_value());
         }
@@ -532,7 +558,11 @@ impl F0401Invoice {
         }
         output.push_str("</Details><Amount>");
 
-        push_text_element(&mut output, "SalesAmount", self.amount.sales_amount.as_str());
+        push_text_element(
+            &mut output,
+            "SalesAmount",
+            self.amount.sales_amount.as_str(),
+        );
         push_text_element(
             &mut output,
             "FreeTaxSalesAmount",
@@ -546,7 +576,11 @@ impl F0401Invoice {
         push_text_element(&mut output, "TaxType", self.amount.tax_type.wire_value());
         push_text_element(&mut output, "TaxRate", self.amount.tax_rate.wire_value());
         push_text_element(&mut output, "TaxAmount", self.amount.tax_amount.as_str());
-        push_text_element(&mut output, "TotalAmount", self.amount.total_amount.as_str());
+        push_text_element(
+            &mut output,
+            "TotalAmount",
+            self.amount.total_amount.as_str(),
+        );
         if let Some(value) = &self.amount.discount_amount {
             push_text_element(&mut output, "DiscountAmount", value.as_str());
         }
@@ -609,12 +643,7 @@ fn validate_role_schema(role: &RoleDescription, path: &str, report: &mut Validat
         &format!("{path}/CustomerNumber"),
         report,
     );
-    check_exact(
-        &role.role_remark,
-        40,
-        &format!("{path}/RoleRemark"),
-        report,
-    );
+    check_exact(&role.role_remark, 40, &format!("{path}/RoleRemark"), report);
 }
 
 fn check_decimal(
@@ -631,12 +660,7 @@ fn check_decimal(
         max_fraction_digits,
         non_negative,
     ) {
-        push_issue(
-            report,
-            path,
-            "MIG_DECIMAL_CONSTRAINT",
-            &error.to_string(),
-        );
+        push_issue(report, path, "MIG_DECIMAL_CONSTRAINT", &error.to_string());
     }
 }
 
@@ -653,7 +677,10 @@ fn check_required_max(value: &str, max: usize, path: &str, report: &mut Validati
 }
 
 fn check_max(value: &Option<String>, max: usize, path: &str, report: &mut ValidationReport) {
-    if value.as_ref().is_some_and(|value| value.chars().count() > max) {
+    if value
+        .as_ref()
+        .is_some_and(|value| value.chars().count() > max)
+    {
         push_issue(
             report,
             path,
@@ -832,10 +859,12 @@ mod tests {
 
         assert!(invoice.validate_schema_constraints().is_valid());
         let semantic = invoice.validate_semantics();
-        assert!(semantic
-            .issues
-            .iter()
-            .any(|issue| issue.code == "MIG_DATE_NOT_GREGORIAN"));
+        assert!(
+            semantic
+                .issues
+                .iter()
+                .any(|issue| issue.code == "MIG_DATE_NOT_GREGORIAN")
+        );
     }
 
     #[test]
@@ -845,24 +874,27 @@ mod tests {
 
         assert!(invoice.validate_schema_constraints().is_valid());
         let semantic = invoice.validate_semantics();
-        assert!(semantic
-            .issues
-            .iter()
-            .any(|issue| issue.code == "F0401_B2C_RANDOM_NUMBER_REQUIRED"));
+        assert!(
+            semantic
+                .issues
+                .iter()
+                .any(|issue| issue.code == "F0401_B2C_RANDOM_NUMBER_REQUIRED")
+        );
     }
 
     #[test]
     fn field_specific_decimal_constraints_cannot_be_bypassed() {
         let mut invoice = invoice();
-        invoice.details[0].quantity =
-            MigDecimal::parse("1.12345678", 30, 10, false).unwrap();
+        invoice.details[0].quantity = MigDecimal::parse("1.12345678", 30, 10, false).unwrap();
 
         let schema = invoice.validate_schema_constraints();
-        assert!(schema
-            .issues
-            .iter()
-            .any(|issue| issue.code == "MIG_DECIMAL_CONSTRAINT"
-                && issue.path.as_deref() == Some("Invoice/Details/ProductItem[1]/Quantity")));
+        assert!(
+            schema
+                .issues
+                .iter()
+                .any(|issue| issue.code == "MIG_DECIMAL_CONSTRAINT"
+                    && issue.path.as_deref() == Some("Invoice/Details/ProductItem[1]/Quantity"))
+        );
     }
 
     #[test]
@@ -873,7 +905,11 @@ mod tests {
         invoice.main.donate_mark = DonateMark::Donated;
 
         let report = invoice.validate();
-        let codes: Vec<&str> = report.issues.iter().map(|issue| issue.code.as_str()).collect();
+        let codes: Vec<&str> = report
+            .issues
+            .iter()
+            .map(|issue| issue.code.as_str())
+            .collect();
         assert!(codes.contains(&"F0401_B2C_RANDOM_NUMBER_REQUIRED"));
         assert!(codes.contains(&"F0401_PRINT_WITH_CARRIER"));
         assert!(codes.contains(&"F0401_PRINT_DONATION_CONFLICT"));
@@ -895,7 +931,8 @@ mod tests {
     fn rejects_invalid_product_cardinality() {
         let invoice = invoice();
         assert_eq!(
-            F0401Invoice::new(invoice.main.clone(), Vec::new(), invoice.amount.clone()).unwrap_err(),
+            F0401Invoice::new(invoice.main.clone(), Vec::new(), invoice.amount.clone())
+                .unwrap_err(),
             F0401StructureError::NoProductItems
         );
     }
