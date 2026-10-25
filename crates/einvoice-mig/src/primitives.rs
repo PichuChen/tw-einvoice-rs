@@ -402,7 +402,9 @@ impl fmt::Display for PrimitiveError {
             Self::InvalidInvoiceNumber => {
                 f.write_str("invoice number must be two uppercase letters followed by eight digits")
             }
-            Self::InvalidDate => f.write_str("MIG date must use YYYYMMDD with valid month/day ranges"),
+            Self::InvalidDate => {
+                f.write_str("MIG date must use YYYYMMDD with valid month/day ranges")
+            }
             Self::InvalidTime => f.write_str("MIG time must use canonical HH:MM:SS"),
             Self::InvalidDecimal => f.write_str("value is not a canonical XML decimal"),
             Self::NegativeDecimal => f.write_str("decimal value must not be negative"),
@@ -431,7 +433,10 @@ mod tests {
 
     #[test]
     fn validates_invoice_number() {
-        assert_eq!(InvoiceNumber::parse("QQ12345678").unwrap().as_str(), "QQ12345678");
+        assert_eq!(
+            InvoiceNumber::parse("QQ12345678").unwrap().as_str(),
+            "QQ12345678"
+        );
         assert!(InvoiceNumber::parse("Q123456789").is_err());
         assert!(InvoiceNumber::parse("qq12345678").is_err());
     }
