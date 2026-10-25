@@ -35,7 +35,7 @@ impl MigDate {
     /// Parses the canonical eight-digit outgoing date representation.
     ///
     /// The lexical check follows the documented month/day ranges. The stricter
-    /// Gregorian calendar check is available through is_calendar_date.
+    /// Gregorian calendar check is available through `is_calendar_date`.
     ///
     /// # Errors
     ///
@@ -133,7 +133,7 @@ impl MigDecimal {
     /// # Errors
     ///
     /// Returns an error for malformed decimals, excessive precision, or a
-    /// negative value when non_negative is true.
+    /// negative value when `non_negative` is true.
     pub fn parse(
         value: impl Into<String>,
         max_total_digits: usize,
