@@ -826,6 +826,46 @@ mod tests {
     }
 
     #[test]
+    fn schema_and_semantic_validation_are_separate_for_calendar_dates() {
+        let mut invoice = invoice();
+        invoice.main.invoice_date = MigDate::parse("20230229").unwrap();
+
+        assert!(invoice.validate_schema_constraints().is_valid());
+        let semantic = invoice.validate_semantics();
+        assert!(semantic
+            .issues
+            .iter()
+            .any(|issue| issue.code == "MIG_DATE_NOT_GREGORIAN"));
+    }
+
+    #[test]
+    fn b2c_random_number_requirement_is_semantic_not_schema_cardinality() {
+        let mut invoice = invoice();
+        invoice.main.random_number = None;
+
+        assert!(invoice.validate_schema_constraints().is_valid());
+        let semantic = invoice.validate_semantics();
+        assert!(semantic
+            .issues
+            .iter()
+            .any(|issue| issue.code == "F0401_B2C_RANDOM_NUMBER_REQUIRED"));
+    }
+
+    #[test]
+    fn field_specific_decimal_constraints_cannot_be_bypassed() {
+        let mut invoice = invoice();
+        invoice.details[0].quantity =
+            MigDecimal::parse("1.12345678", 30, 10, false).unwrap();
+
+        let schema = invoice.validate_schema_constraints();
+        assert!(schema
+            .issues
+            .iter()
+            .any(|issue| issue.code == "MIG_DECIMAL_CONSTRAINT"
+                && issue.path.as_deref() == Some("Invoice/Details/ProductItem[1]/Quantity")));
+    }
+
+    #[test]
     fn detects_b2c_and_print_semantic_conflicts() {
         let mut invoice = invoice();
         invoice.main.random_number = None;
