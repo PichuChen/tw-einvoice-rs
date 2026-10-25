@@ -31,6 +31,7 @@ and synthetic test vectors.
 - `tw-einvoice-signing`: strict attached CMS signer and PFX backend
 - `tw-einvoice-pack`: envelope -> CMS -> armored signed artifact
 - `tw-einvoice-results`: ProcessResult/SummaryResult parsing and validation
+- `tw-einvoice-state`: durable transport state, terminal disposition, and optimistic persistence boundary
 - `tw-einvoice-transport`: filename, ZIP, SFTP, PFS001 and reconciliation
 - `tw-einvoice-client`: cross-layer validated prepare/submit facade
 - `tw-einvoice-cli`: `prepare`, `submit`, and `receive` operator commands
@@ -60,7 +61,9 @@ A non-root multi-stage Linux image is included. See
 [`docs/container.md`](docs/container.md) for build, mounts, secret handling,
 test/production selection, and durable inbox guidance. Supply-chain controls,
 locked builds, RustSec scanning, and SBOM artifacts are documented in
-[`docs/supply-chain.md`](docs/supply-chain.md).
+[`docs/supply-chain.md`](docs/supply-chain.md). Durable reconciliation state and
+the future PostgreSQL persistence boundary are documented in
+[`docs/state-persistence.md`](docs/state-persistence.md).
 
 ```sh
 docker build -t tw-einvoice-rs:local .
