@@ -115,7 +115,10 @@ mod tests {
     fn catalog_contains_current_twenty_one_message_codes() {
         assert_eq!(Mig41MessageCode::ALL.len(), 21);
         assert_eq!(Mig41MessageCode::F0401.as_str(), "F0401");
-        assert_eq!("E0504".parse::<Mig41MessageCode>().unwrap(), Mig41MessageCode::E0504);
+        assert_eq!(
+            "E0504".parse::<Mig41MessageCode>().unwrap(),
+            Mig41MessageCode::E0504
+        );
         assert!("F0601".parse::<Mig41MessageCode>().is_err());
     }
 }
