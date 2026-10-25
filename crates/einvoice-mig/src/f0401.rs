@@ -922,7 +922,11 @@ mod tests {
         invoice.amount.tax_type = TaxType::ZeroRated;
 
         let report = invoice.validate();
-        let codes: Vec<&str> = report.issues.iter().map(|issue| issue.code.as_str()).collect();
+        let codes: Vec<&str> = report
+            .issues
+            .iter()
+            .map(|issue| issue.code.as_str())
+            .collect();
         assert!(codes.contains(&"F0401_PRODUCT_MIXED_TAX_FORBIDDEN"));
         assert!(codes.contains(&"F0401_ZERO_RATE_REASON_REQUIRED"));
     }
