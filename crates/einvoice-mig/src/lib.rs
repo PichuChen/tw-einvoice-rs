@@ -12,8 +12,9 @@ pub use f0401::{
     F0401_NAMESPACE,
 };
 pub use primitives::{
-    BondedArea, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber, InvoiceType,
-    MigDate, MigDecimal, MigTime, PrimitiveError, PrintMark, TaxRate, TaxType, ZeroTaxRateReason,
+    BondedArea, BuyerRemark, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber,
+    InvoiceType, MigDate, MigDecimal, MigTime, PrimitiveError, PrintMark, TaxRate, TaxType,
+    ZeroTaxRateReason,
 };
 
 /// Metadata common to a MIG document before message-specific parsing is added.
