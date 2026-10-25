@@ -23,9 +23,15 @@ pub enum TransportState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TransportAdvance {
-    Advanced { from: TransportState, to: TransportState },
+    Advanced {
+        from: TransportState,
+        to: TransportState,
+    },
     Unchanged,
-    IgnoredStale { current: TransportState, attempted: TransportState },
+    IgnoredStale {
+        current: TransportState,
+        attempted: TransportState,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -285,9 +291,17 @@ impl Error for SubmissionInitError {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApplyError {
-    MessageIdMismatch { expected: String, actual: String },
-    SummaryMessageMissing { message_id: String },
-    DuplicateSummaryMessage { message_id: String, count: usize },
+    MessageIdMismatch {
+        expected: String,
+        actual: String,
+    },
+    SummaryMessageMissing {
+        message_id: String,
+    },
+    DuplicateSummaryMessage {
+        message_id: String,
+        count: usize,
+    },
     InconsistentSummary {
         message_id: String,
         issues: Vec<SummaryValidationIssue>,
@@ -378,15 +392,26 @@ mod tests {
 
     use super::*;
 
-    const MESSAGE_ID: &str =
-        "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000";
+    const MESSAGE_ID: &str = "4.1-F0401-20260824-141623456-550e8400-e29b-41d4-a716-446655440000";
 
     fn routing() -> ResultRouting {
         ResultRouting {
-            from: ResultParty { party_id: "12345678".into(), description: None },
-            from_vac: ResultRoute { routing_id: "FROM".into(), description: None },
-            to: ResultParty { party_id: "PLATFORM".into(), description: None },
-            to_vac: ResultRoute { routing_id: "TO".into(), description: None },
+            from: ResultParty {
+                party_id: "12345678".into(),
+                description: None,
+            },
+            from_vac: ResultRoute {
+                routing_id: "FROM".into(),
+                description: None,
+            },
+            to: ResultParty {
+                party_id: "PLATFORM".into(),
+                description: None,
+            },
+            to_vac: ResultRoute {
+                routing_id: "TO".into(),
+                description: None,
+            },
         }
     }
 
@@ -419,9 +444,18 @@ mod tests {
                 action: "C0401".into(),
             },
             result: ResultBreakdown {
-                total: ResultDetail { count: total, invoices: Vec::new() },
-                good: ResultDetail { count: good, invoices: Vec::new() },
-                failed: ResultDetail { count: failed, invoices: Vec::new() },
+                total: ResultDetail {
+                    count: total,
+                    invoices: Vec::new(),
+                },
+                good: ResultDetail {
+                    count: good,
+                    invoices: Vec::new(),
+                },
+                failed: ResultDetail {
+                    count: failed,
+                    invoices: Vec::new(),
+                },
             },
         }
     }
@@ -431,9 +465,15 @@ mod tests {
         let mut record = SubmissionRecord::new(MESSAGE_ID, 2).unwrap();
         assert_eq!(
             record.advance_transport(TransportState::Prepared),
-            TransportAdvance::Advanced { from: TransportState::Created, to: TransportState::Prepared }
+            TransportAdvance::Advanced {
+                from: TransportState::Created,
+                to: TransportState::Prepared
+            }
         );
-        assert_eq!(record.advance_transport(TransportState::Prepared), TransportAdvance::Unchanged);
+        assert_eq!(
+            record.advance_transport(TransportState::Prepared),
+            TransportAdvance::Unchanged
+        );
         assert_eq!(
             record.advance_transport(TransportState::Created),
             TransportAdvance::IgnoredStale {
@@ -447,7 +487,10 @@ mod tests {
     #[test]
     fn process_result_records_diagnostics_without_terminal_disposition() {
         let mut record = SubmissionRecord::new(MESSAGE_ID, 2).unwrap();
-        assert_eq!(record.apply_process_result(process("E001")).unwrap(), ApplyOutcome::Changed);
+        assert_eq!(
+            record.apply_process_result(process("E001")).unwrap(),
+            ApplyOutcome::Changed
+        );
         assert_eq!(record.transport_state(), TransportState::ProcessObserved);
         assert_eq!(record.process_results()[0].diagnostics[0].code, "E001");
         assert!(record.terminal_summary().is_none());
@@ -457,8 +500,14 @@ mod tests {
     fn exact_process_result_replay_is_idempotent() {
         let mut record = SubmissionRecord::new(MESSAGE_ID, 2).unwrap();
         let result = process("0000");
-        assert_eq!(record.apply_process_result(result.clone()).unwrap(), ApplyOutcome::Changed);
-        assert_eq!(record.apply_process_result(result).unwrap(), ApplyOutcome::UnchangedReplay);
+        assert_eq!(
+            record.apply_process_result(result.clone()).unwrap(),
+            ApplyOutcome::Changed
+        );
+        assert_eq!(
+            record.apply_process_result(result).unwrap(),
+            ApplyOutcome::UnchangedReplay
+        );
         assert_eq!(record.process_results().len(), 1);
     }
 
@@ -496,18 +545,33 @@ mod tests {
     fn exact_terminal_replay_is_idempotent_but_conflict_is_rejected() {
         let mut record = SubmissionRecord::new(MESSAGE_ID, 2).unwrap();
         let first = summary(2, 0);
-        assert_eq!(record.apply_summary_message(first.clone()).unwrap(), ApplyOutcome::Changed);
-        assert_eq!(record.apply_summary_message(first).unwrap(), ApplyOutcome::UnchangedReplay);
+        assert_eq!(
+            record.apply_summary_message(first.clone()).unwrap(),
+            ApplyOutcome::Changed
+        );
+        assert_eq!(
+            record.apply_summary_message(first).unwrap(),
+            ApplyOutcome::UnchangedReplay
+        );
         let error = record.apply_summary_message(summary(1, 1)).unwrap_err();
-        assert!(matches!(error, ApplyError::ConflictingTerminalSummary { .. }));
-        assert_eq!(record.terminal_summary().unwrap().disposition, TerminalDisposition::AllGood);
+        assert!(matches!(
+            error,
+            ApplyError::ConflictingTerminalSummary { .. }
+        ));
+        assert_eq!(
+            record.terminal_summary().unwrap().disposition,
+            TerminalDisposition::AllGood
+        );
     }
 
     #[test]
     fn late_process_result_adds_diagnostics_without_transport_regression() {
         let mut record = SubmissionRecord::new(MESSAGE_ID, 2).unwrap();
         record.apply_summary_message(summary(2, 0)).unwrap();
-        assert_eq!(record.apply_process_result(process("LATE")).unwrap(), ApplyOutcome::Changed);
+        assert_eq!(
+            record.apply_process_result(process("LATE")).unwrap(),
+            ApplyOutcome::Changed
+        );
         assert_eq!(record.transport_state(), TransportState::SummaryObserved);
         assert_eq!(record.process_results().len(), 1);
     }
@@ -517,7 +581,10 @@ mod tests {
         let mut record = SubmissionRecord::new(MESSAGE_ID, 2).unwrap();
         let mut other = summary(2, 0);
         other.info.id = "other-message-id".into();
-        let result = SummaryResult { routing: routing(), messages: vec![other, summary(1, 1)] };
+        let result = SummaryResult {
+            routing: routing(),
+            messages: vec![other, summary(1, 1)],
+        };
         record.apply_summary_result(&result).unwrap();
         assert_eq!(
             record.terminal_summary().unwrap().disposition,
@@ -544,12 +611,17 @@ mod tests {
         ) -> Result<StoreWriteOutcome, Self::Error> {
             let current = self.rows.get(record.message_id()).map(|row| row.revision);
             if current != expected_revision {
-                return Ok(StoreWriteOutcome::Conflict { current_revision: current });
+                return Ok(StoreWriteOutcome::Conflict {
+                    current_revision: current,
+                });
             }
             let revision = current.map_or(0, |value| value + 1);
             self.rows.insert(
                 record.message_id().to_owned(),
-                VersionedSubmission { revision, record: record.clone() },
+                VersionedSubmission {
+                    revision,
+                    record: record.clone(),
+                },
             );
             Ok(StoreWriteOutcome::Stored { revision })
         }
@@ -570,7 +642,9 @@ mod tests {
         );
         assert_eq!(
             store.compare_and_swap(Some(0), &record).unwrap(),
-            StoreWriteOutcome::Conflict { current_revision: Some(1) }
+            StoreWriteOutcome::Conflict {
+                current_revision: Some(1)
+            }
         );
         assert_eq!(store.load(MESSAGE_ID).unwrap().unwrap().revision, 1);
     }
