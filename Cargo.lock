@@ -1573,6 +1573,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "tw-einvoice-state"
+version = "0.1.0"
+dependencies = [
+ "tw-einvoice-results",
+]
+
+[[package]]
 name = "tw-einvoice-signing"
 version = "0.1.0"
 dependencies = [
