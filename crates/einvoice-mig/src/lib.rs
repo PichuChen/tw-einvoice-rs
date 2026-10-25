@@ -8,8 +8,8 @@ use tw_einvoice_core::{MessageCode, MigVersion};
 
 pub use catalog::{Mig41MessageCode, UnknownMig41MessageCode};
 pub use f0401::{
-    F0401Amount, F0401Invoice, F0401Main, F0401StructureError, ProductItem, RoleDescription,
-    F0401_NAMESPACE,
+    F0401_NAMESPACE, F0401Amount, F0401Invoice, F0401Main, F0401StructureError, ProductItem,
+    RoleDescription,
 };
 pub use primitives::{
     BondedArea, BuyerRemark, CurrencyCode, CustomsClearanceMark, DonateMark, InvoiceNumber,
