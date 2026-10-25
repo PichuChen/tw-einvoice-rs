@@ -306,21 +306,60 @@ impl F0401Invoice {
         output.push_str("</Invoice>");
         output
     }
-
 }
 
 fn validate_main_schema(main: &F0401Main, report: &mut ValidationReport) {
     validate_role_schema(&main.seller, "Invoice/Main/Seller", report);
     validate_role_schema(&main.buyer, "Invoice/Main/Buyer", report);
-    check_max(main.main_remark.as_deref(), 200, "Invoice/Main/MainRemark", report);
+    check_max(
+        main.main_remark.as_deref(),
+        200,
+        "Invoice/Main/MainRemark",
+        report,
+    );
     check_max(main.category.as_deref(), 2, "Invoice/Main/Category", report);
-    check_max(main.relate_number.as_deref(), 20, "Invoice/Main/RelateNumber", report);
-    check_exact(main.group_mark.as_deref(), 1, "Invoice/Main/GroupMark", report);
-    check_max(main.carrier_type.as_deref(), 6, "Invoice/Main/CarrierType", report);
-    check_max(main.carrier_id1.as_deref(), 400, "Invoice/Main/CarrierId1", report);
-    check_max(main.carrier_id2.as_deref(), 400, "Invoice/Main/CarrierId2", report);
-    check_max(main.reserved1.as_deref(), 20, "Invoice/Main/Reserved1", report);
-    check_max(main.reserved2.as_deref(), 100, "Invoice/Main/Reserved2", report);
+    check_max(
+        main.relate_number.as_deref(),
+        20,
+        "Invoice/Main/RelateNumber",
+        report,
+    );
+    check_exact(
+        main.group_mark.as_deref(),
+        1,
+        "Invoice/Main/GroupMark",
+        report,
+    );
+    check_max(
+        main.carrier_type.as_deref(),
+        6,
+        "Invoice/Main/CarrierType",
+        report,
+    );
+    check_max(
+        main.carrier_id1.as_deref(),
+        400,
+        "Invoice/Main/CarrierId1",
+        report,
+    );
+    check_max(
+        main.carrier_id2.as_deref(),
+        400,
+        "Invoice/Main/CarrierId2",
+        report,
+    );
+    check_max(
+        main.reserved1.as_deref(),
+        20,
+        "Invoice/Main/Reserved1",
+        report,
+    );
+    check_max(
+        main.reserved2.as_deref(),
+        100,
+        "Invoice/Main/Reserved2",
+        report,
+    );
 
     if main
         .random_number
@@ -352,7 +391,12 @@ fn validate_details_schema(details: &[ProductItem], report: &mut ValidationRepor
             &format!("{base}/SequenceNumber"),
             report,
         );
-        check_max(item.remark.as_deref(), 120, &format!("{base}/Remark"), report);
+        check_max(
+            item.remark.as_deref(),
+            120,
+            &format!("{base}/Remark"),
+            report,
+        );
         check_max(
             item.relate_number.as_deref(),
             50,
@@ -428,14 +472,7 @@ fn validate_amount_schema(amount: &F0401Amount, report: &mut ValidationReport) {
         report,
     );
     if let Some(value) = &amount.discount_amount {
-        check_decimal(
-            value,
-            20,
-            7,
-            true,
-            "Invoice/Amount/DiscountAmount",
-            report,
-        );
+        check_decimal(value, 20, 7, true, "Invoice/Amount/DiscountAmount", report);
     }
     if let Some(value) = &amount.original_currency_amount {
         check_decimal(
@@ -448,14 +485,7 @@ fn validate_amount_schema(amount: &F0401Amount, report: &mut ValidationReport) {
         );
     }
     if let Some(value) = &amount.exchange_rate {
-        check_decimal(
-            value,
-            13,
-            5,
-            true,
-            "Invoice/Amount/ExchangeRate",
-            report,
-        );
+        check_decimal(value, 13, 5, true, "Invoice/Amount/ExchangeRate", report);
     }
 }
 
@@ -560,7 +590,12 @@ fn validate_date(date: &MigDate, path: &str, report: &mut ValidationReport) {
 
 fn validate_role_schema(role: &RoleDescription, path: &str, report: &mut ValidationReport) {
     check_required_max(&role.name, 60, &format!("{path}/Name"), report);
-    check_max(role.address.as_deref(), 100, &format!("{path}/Address"), report);
+    check_max(
+        role.address.as_deref(),
+        100,
+        &format!("{path}/Address"),
+        report,
+    );
     check_max(
         role.person_in_charge.as_deref(),
         30,
