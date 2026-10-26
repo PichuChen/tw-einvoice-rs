@@ -1530,11 +1530,16 @@ dependencies = [
 name = "tw-einvoice-client"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
+ "openssl",
+ "serde_json",
  "tw-einvoice-core",
  "tw-einvoice-envelope",
+ "tw-einvoice-mig",
  "tw-einvoice-pack",
  "tw-einvoice-signing",
  "tw-einvoice-transport",
+ "zip",
 ]
 
 [[package]]
@@ -1573,18 +1578,18 @@ dependencies = [
 ]
 
 [[package]]
-name = "tw-einvoice-state"
-version = "0.1.0"
-dependencies = [
- "tw-einvoice-results",
-]
-
-[[package]]
 name = "tw-einvoice-signing"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "openssl",
+]
+
+[[package]]
+name = "tw-einvoice-state"
+version = "0.1.0"
+dependencies = [
+ "tw-einvoice-results",
 ]
 
 [[package]]
