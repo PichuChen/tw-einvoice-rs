@@ -14,7 +14,7 @@ tw-einvoice-signing = { path = "../einvoice-signing" }
 tw-einvoice-transport = { path = "../einvoice-transport" }
 
 [dev-dependencies]
-base64 = "0.22"
+base64 = "0.23"
 openssl = "0.10"
 serde_json = "1"
 tw-einvoice-core = { path = "../einvoice-core" }
